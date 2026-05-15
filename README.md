@@ -145,6 +145,34 @@ Across CA, UK, and US, none of the country-level p-values fell below the 0.05 si
 
 Country-level bootstrap confidence intervals were also computed to estimate the uncertainty of uplift in each market. These results further support the conclusion that the observed country-level differences should be interpreted cautiously.
 
+### 🍁 Product Risk Insight: Canada Segment
+
+The Canadian market shows the largest negative descriptive uplift among all countries.
+
+| Metric | Value |
+| :--- | ---: |
+| Original uplift | -5.92% |
+| Mean bootstrap uplift | -5.82% |
+| 95% Bootstrap CI | [-14.29%, +3.11%] |
+
+Although the confidence interval contains 0, the risk profile is asymmetric. The possible upside is limited (+3.11%), while the downside range is nearly 4.6× larger (-14.29%). In the best-case scenario, the new page may improve conversion by around 3.11%, but in the worst-case scenario, it may reduce conversion by as much as 14.29%.
+
+From a product risk perspective, this is concerning. Even though the result is not statistically significant, the potential downside in CA is too large to ignore. This supports the overall recommendation not to roll out the new page at this stage.
+
+### 📋 Business Risk Interpretation
+
+Although the country-level results are not statistically significant under the traditional frequentist threshold, the bootstrap confidence intervals provide an important business risk perspective.
+
+Product decisions should not rely only on whether a confidence interval crosses zero. From a risk management perspective, the size and direction of potential downside outcomes also matter. In this case:
+
+- **UK** shows a small positive descriptive uplift.
+- **US** shows a negative descriptive uplift and represents the largest user segment, strongly influencing the overall result.
+- **CA** shows the largest negative relative uplift and the widest downside risk.
+
+Therefore, even though the statistical tests do not prove that the new page is significantly worse, the risk profile does not support a full rollout.
+
+> **Recommendation:** Do not roll out the new page at this stage. Further redesign and additional testing are recommended before considering deployment.
+
 ---
 
 ## 📊 Visualization
