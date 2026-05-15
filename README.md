@@ -96,10 +96,34 @@ These inconsistent assignment-page records were removed before analysis.
 ---
 
 ## Week 1 Processing Steps
-
 The preprocessing notebook is:
 
 ```text
 notebooks/data_preprocessing.ipynb
 
 
+## Week 2: Conversion Rate, Uplift & Hypothesis Testing
+
+### Objective
+
+The objective of Week 2 is to evaluate whether the new checkout page affects user conversion rate compared with the old page.
+
+After completing data preprocessing in Week 1, the cleaned dataset is used to calculate conversion metrics and perform statistical testing.
+
+This week focuses on:
+
+- Calculating conversion rate for `old_page`
+- Calculating conversion rate for `new_page`
+- Estimating absolute lift
+- Estimating relative uplift
+- Running a two-proportion z-test
+- Saving the main A/B testing results
+
+---
+
+## Input Data
+
+The input file for Week 2 is:
+
+```text
+data/processed/dataset_cleaned.csv
