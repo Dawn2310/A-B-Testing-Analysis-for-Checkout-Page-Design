@@ -12,7 +12,7 @@ This repository contains an end-to-end A/B testing analysis designed to evaluate
 
 ### Hypothesis Testing
 * **Null Hypothesis ($H_0$):** The new checkout page has the same or lower conversion rate compared to the old page.
-* **Alternative Hypothesis ($H_1$):** The new checkout page has a higher conversion rate compared to the old page.
+* **Alternative Hypothesis ($H_1$):** The new checkout page has a different conversion rate compared to the old page.
 
 ### Experimental Design
 The project compares two variants:
