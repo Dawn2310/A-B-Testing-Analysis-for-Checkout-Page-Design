@@ -18,3 +18,86 @@ ab-testing-checkout-analysis/
 |-- README.md
 |-- main.py
 ```
+
+# A/B Testing Analysis for Checkout Page Design
+
+## Project Overview
+
+This project analyzes an e-commerce A/B testing experiment to evaluate whether a redesigned checkout page affects user conversion rate compared with the existing page.
+
+The main objective is to determine whether the new page should be rolled out based on conversion rate, uplift, statistical testing, and follow-up segmentation analysis.
+
+---
+
+## Week 1: Data Preparation & Quality Checks
+
+### Objective
+
+The objective of Week 1 is to prepare a clean dataset for A/B testing analysis.
+
+This includes:
+
+- Loading the raw A/B testing dataset
+- Loading the country dataset
+- Checking missing values
+- Checking duplicate users
+- Checking consistency between experiment group and landing page
+- Removing inconsistent assignment-page records
+- Merging country information
+- Saving the cleaned dataset
+
+---
+
+## Dataset
+
+This project uses two raw datasets.
+
+### 1. `ab_test.csv`
+
+This is the main A/B testing dataset.
+
+| Column | Description |
+|---|---|
+| `user_id` | Unique user identifier |
+| `timestamp` | Time-related field from the dataset |
+| `group` | Experiment group: `control` or `treatment` |
+| `landing_page` | Page shown to the user: `old_page` or `new_page` |
+| `converted` | Binary conversion outcome: `1` = converted, `0` = not converted |
+
+### 2. `countries_ab.csv`
+
+This dataset contains country information for each user.
+
+| Column | Description |
+|---|---|
+| `user_id` | Unique user identifier |
+| `country` | User country |
+
+---
+
+## A/B Test Logic
+
+In a valid A/B testing setup:
+
+| Group | Expected Landing Page |
+|---|---|
+| `control` | `old_page` |
+| `treatment` | `new_page` |
+
+The control group represents the existing page, while the treatment group receives the new page.
+
+During data quality checking, inconsistent records were identified where:
+
+- `control` users saw `new_page`
+- `treatment` users saw `old_page`
+
+These inconsistent assignment-page records were removed before analysis.
+
+---
+
+## Week 1 Processing Steps
+
+The preprocessing notebook is:
+
+```text
+notebooks/01_data_preprocessing.ipynb
