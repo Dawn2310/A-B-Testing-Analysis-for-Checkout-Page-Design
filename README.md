@@ -1,11 +1,11 @@
-# 🛒 A/B Testing Analysis for Checkout Page Design
+#  A/B Testing Analysis for Checkout Page Design
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![Pandas](https://img.shields.io/badge/Pandas-Data_Processing-150458.svg)
 ![SciPy](https://img.shields.io/badge/SciPy-Statistical_Testing-8CAAE6.svg)
 ![Matplotlib](https://img.shields.io/badge/Matplotlib-Visualization-orange.svg)
 
-## 📌 Project Overview
+## Project Overview
 In e-commerce, the checkout page is a critical touchpoint. Even minor design modifications can significantly impact whether users complete a purchase or abandon their carts. 
 
 This repository contains an end-to-end A/B testing analysis to evaluate whether a newly redesigned checkout page (`new_page`) improves the conversion rate compared to the existing design (`old_page`). 
@@ -14,7 +14,7 @@ This repository contains an end-to-end A/B testing analysis to evaluate whether 
 
 ---
 
-## 🎯 Research Problem
+## Research Problem
 The core objective is to determine if the difference in conversion rates between the old and new pages is statistically significant, or merely due to random chance. 
 
 We formulated a two-tailed hypothesis test:
@@ -23,7 +23,7 @@ We formulated a two-tailed hypothesis test:
 
 ---
 
-## 📂 Dataset
+## Dataset
 The analysis is based on two raw datasets:
 1. `ab_test.csv`: Contains user interactions during the test period.
    * `user_id`: Unique identifier for each user.
@@ -35,7 +35,7 @@ The analysis is based on two raw datasets:
 
 ---
 
-## 🗂️ Repository Structure
+## Repository Structure
 
 ```
 A-B-Testing-Analysis-for-Checkout-Page-Design/
@@ -91,7 +91,7 @@ A-B-Testing-Analysis-for-Checkout-Page-Design/
 
 ---
 
-## 🧹 Data Preprocessing
+## Data Preprocessing
 To ensure the integrity of the statistical analysis, the raw data underwent rigorous cleaning:
 * **Mismatch Filtering:** Removed inconsistent records where users in the `control` group were mistakenly served the `new_page`, and users in the `treatment` group saw the `old_page`.
 * **Deduplication:** Checked and removed duplicate `user_id`s so that each user is counted exactly once.
@@ -99,7 +99,7 @@ To ensure the integrity of the statistical analysis, the raw data underwent rigo
 
 ---
 
-## 📈 Conversion Rate Analysis
+## Conversion Rate Analysis
 After preprocessing, we calculated the descriptive performance metrics and ran a Frequentist statistical test.
 
 * **Old Page (Control) CR:** 12.03%
@@ -114,7 +114,7 @@ After preprocessing, we calculated the descriptive performance metrics and ran a
 
 ---
 
-## 🎲 Bootstrap 
+## Bootstrap 
 To further validate the stability of our findings, we applied a Bootstrap resampling method.
 * **Simulation:** 10,000 iterations of sampling with replacement.
 * **Mean Bootstrap Uplift:** -1.29%
@@ -124,7 +124,7 @@ To further validate the stability of our findings, we applied a Bootstrap resamp
 
 ---
 
-## 🌍 Country Segmentation
+## Country Segmentation
 We broke down the performance by market to check for localized effects:
 
 | Country | Old Page CR | New Page CR | Relative Uplift |
@@ -137,7 +137,7 @@ We broke down the performance by market to check for localized effects:
 
 ---
 
-## 🌍 Country-Level Statistical Testing
+## Country-Level Statistical Testing
 
 To verify whether the observed country-level differences were statistically significant, two-proportion z-tests were conducted separately for each country.
 
@@ -145,7 +145,7 @@ Across CA, UK, and US, none of the country-level p-values fell below the 0.05 si
 
 Country-level bootstrap confidence intervals were also computed to estimate the uncertainty of uplift in each market. These results further support the conclusion that the observed country-level differences should be interpreted cautiously.
 
-### 🍁 Product Risk Insight: Canada Segment
+### Product Risk Insight: Canada Segment
 
 The Canadian market shows the largest negative descriptive uplift among all countries.
 
@@ -159,7 +159,7 @@ Although the confidence interval contains 0, the risk profile is asymmetric. The
 
 From a product risk perspective, this is concerning. Even though the result is not statistically significant, the potential downside in CA is too large to ignore. This supports the overall recommendation not to roll out the new page at this stage.
 
-### 📋 Business Risk Interpretation
+### Business Risk Interpretation
 
 Although the country-level results are not statistically significant under the traditional frequentist threshold, the bootstrap confidence intervals provide an important business risk perspective.
 
@@ -175,7 +175,7 @@ Therefore, even though the statistical tests do not prove that the new page is s
 
 ---
 
-## 📊 Visualization
+## Visualization
 Visual reporting was generated to communicate risks to stakeholders clearly. *(Charts are available in the `figures/` directory).*
 
 1. **Conversion Rate Bar Chart with CI:** (`cr_bar_ci.png`) Shows the overlapping error bars, visualizing the lack of statistical significance.
@@ -185,7 +185,7 @@ Visual reporting was generated to communicate risks to stakeholders clearly. *(C
 
 ---
 
-## ✅ Current Progress
+## Current Progress
 - [x] Load raw datasets
 - [x] Missing value & duplicate user checks
 - [x] Assignment-page mismatch filtering
@@ -199,6 +199,6 @@ Visual reporting was generated to communicate risks to stakeholders clearly. *(C
 
 ---
 
-## 🚀 Next Steps
+## Next Steps
 - [ ] **Logistic Regression Modeling:** Build models (e.g., `converted ~ new_page * country`) to statistically evaluate the interaction effects between the page version and user demographics.
 - [ ] **Time-Series Analysis:** Check for novelty effects (if the conversion rate of the new page changed over the duration of the test).
