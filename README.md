@@ -3,40 +3,6 @@
 This repository contains an A/B testing analysis for an e-commerce checkout page design.  
 The goal is to evaluate whether a redesigned checkout page affects user conversion rate compared with the existing checkout page.
 
-## Repository Structure
-
-```text
-A-B-Testing-Analysis-for-Checkout-Page-Design/
-│
-├── data/
-│   ├── raw/
-│   │   ├── ab_test.csv
-│   │   └── countries_ab.csv
-│   │
-│   ├── processed/
-│   │   └── dataset_cleaned.csv
-│   │
-│   └── results/
-│       ├── conversion_summary.csv
-│       ├── lift_summary.csv
-│       └── ztest_results.csv
-│
-├── notebooks/
-│   ├── data_preprocessing.ipynb
-│   └── 02_conversion_rate_ab_test.ipynb
-│
-├── src/
-│   ├── __init__.py
-│   └── config.py
-│
-├── figures/
-│
-├── reports/
-│
-├── README.md
-├── requirements.txt
-├── .gitignore
-└── main.py
 ---
 
 ## Project Overview
