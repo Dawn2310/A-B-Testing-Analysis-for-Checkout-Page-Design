@@ -101,7 +101,7 @@ The preprocessing notebook is:
 ```text
 notebooks/data_preprocessing.ipynb
 
-
+---
 ## Week 2: Conversion Rate, Uplift & Hypothesis Testing
 
 ### Objective
@@ -124,6 +124,9 @@ This week focuses on:
 ## Input Data
 
 The input file for Week 2 is:
+
+```text
+data/processed/dataset_cleaned.csv
 
 ```text
 data/processed/dataset_cleaned.csv
