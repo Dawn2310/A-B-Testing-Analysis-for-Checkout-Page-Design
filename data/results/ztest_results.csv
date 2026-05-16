@@ -1,2 +1,0 @@
-test_name,hypothesis_null,hypothesis_alternative,z_statistic,p_value,alpha,decision,interpretation
-Two-Proportion Z-test,CR_new = CR_old,CR_new != CR_old,-1.294922131961739,0.19534709281210638,0.05,Fail to reject H0,There is not enough evidence that old_page and new_page are different.
