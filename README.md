@@ -6,16 +6,16 @@
 ![Matplotlib](https://img.shields.io/badge/Matplotlib-Visualization-orange.svg)
 
 ## Project Overview
-In e-commerce, the checkout page is a critical touchpoint. Even minor design modifications can significantly impact whether users complete a purchase or abandon their carts. 
+In e-commerce, the checkout page is a critical touchpoint. Even minor design modifications can significantly impact whether users complete a purchase or abandon their carts.
 
-This repository contains an end-to-end A/B testing analysis to evaluate whether a newly redesigned checkout page (`new_page`) improves the conversion rate compared to the existing design (`old_page`). 
+This repository contains an end-to-end A/B testing analysis to evaluate whether a newly redesigned checkout page (`new_page`) improves the conversion rate compared to the existing design (`old_page`).
 
 **Final Business Recommendation:** Do not roll out the new page at this stage. The new design does not show statistically significant improvement in conversion rate, and the observed uplift is slightly negative. Further design iteration and additional testing are recommended before any full rollout decision.
 
 ---
 
 ## Research Problem
-The core objective is to determine if the difference in conversion rates between the old and new pages is statistically significant, or merely due to random chance. 
+The core objective is to determine if the difference in conversion rates between the old and new pages is statistically significant, or merely due to random chance.
 
 We formulated a two-tailed hypothesis test:
 * **Null Hypothesis (H0):** The new checkout page has the exact same conversion rate as the old page (`CR_new = CR_old`).
@@ -96,6 +96,10 @@ To ensure the integrity of the statistical analysis, the raw data underwent rigo
 * **Mismatch Filtering:** Removed inconsistent records where users in the `control` group were mistakenly served the `new_page`, and users in the `treatment` group saw the `old_page`.
 * **Deduplication:** Checked and removed duplicate `user_id`s so that each user is counted exactly once.
 * **Data Integration:** Merged the cleaned A/B test data with the country dataset using a left join on `user_id`, followed by missing-value checks.
+* **Timestamp Feature Engineering:** The original `timestamp` column is not stored in a standard full datetime format — values appear in a shortened time-like format such as `11:48.6`, `01:45.2`, and `55:06.2`. To avoid datetime parsing errors, the column is kept as text and transformed into the following duration-based features:
+  * `time_raw`: the original timestamp value preserved as text.
+  * `elapsed_minutes`: the timestamp converted into elapsed minutes as a numeric value.
+  * `time_bucket`: a grouped time interval for exploratory binning.
 
 ---
 
@@ -114,13 +118,15 @@ After preprocessing, we calculated the descriptive performance metrics and ran a
 
 ---
 
-## Bootstrap 
-To further validate the stability of our findings, we applied a Bootstrap resampling method.
+## Bootstrap
+To further estimate the uncertainty of the observed uplift, a bootstrap resampling method was applied.
+
 * **Simulation:** 10,000 iterations of sampling with replacement.
+* **Original Uplift:** -1.30%
 * **Mean Bootstrap Uplift:** -1.29%
 * **95% Confidence Interval (CI):** `[-3.24%, +0.71%]`
 
-**Insight:** Over 75% of the simulated scenarios resulted in a negative uplift. Because the 95% Confidence Interval crosses zero, it mathematically confirms that the new page does not provide a guaranteed improvement.
+**Insight:** The mean bootstrap uplift is negative, suggesting that the new page tends to underperform the old page in repeated resampling. However, the 95% confidence interval crosses zero, meaning the observed negative uplift is not statistically robust. This supports the previous two-proportion z-test conclusion that there is not enough evidence to claim a significant difference between the two pages.
 
 ---
 
@@ -179,7 +185,7 @@ Therefore, even though the statistical tests do not prove that the new page is s
 Visual reporting was generated to communicate risks to stakeholders clearly. *(Charts are available in the `figures/` directory).*
 
 1. **Conversion Rate Bar Chart with CI:** (`cr_bar_ci.png`) Shows the overlapping error bars, visualizing the lack of statistical significance.
-2. **Bootstrap Uplift Distribution:** (`bootstrap_uplift_distribution.png`) A histogram showing that the vast majority of simulated outcomes fall below the 0% threshold.
+2. **Bootstrap Uplift Distribution:** (`bootstrap_uplift_distribution.png`) A histogram showing that the majority of simulated outcomes fall below the 0% threshold.
 3. **Country Uplift Bar Chart:** (`country_uplift_bar.png`) Highlights the severe underperformance in the CA market.
 4. **Lift Waterfall Chart:** (`lift_waterfall.png`) A business-friendly chart demonstrating the absolute drop from 12.03% to 11.87%.
 
@@ -190,6 +196,7 @@ Visual reporting was generated to communicate risks to stakeholders clearly. *(C
 - [x] Missing value & duplicate user checks
 - [x] Assignment-page mismatch filtering
 - [x] Merge country information
+- [x] Timestamp feature engineering (`time_raw`, `elapsed_minutes`, `time_bucket`)
 - [x] Calculate descriptive Conversion Rates & Lifts
 - [x] Run Two-Proportion Z-Test
 - [x] Bootstrap Confidence Interval (10,000 iterations)
@@ -202,5 +209,9 @@ Visual reporting was generated to communicate risks to stakeholders clearly. *(C
 ---
 
 ## Next Steps
+
 - [ ] **Logistic Regression Modeling:** Build models such as `converted ~ new_page`, `converted ~ new_page + country`, and `converted ~ new_page * country` to evaluate whether the page effect remains after controlling for country and whether the treatment effect varies across country segments.
-- [ ] **Time-Series Analysis:** Check for novelty effects (if the conversion rate of the new page changed over the duration of the test).
+
+- [ ] **Final Report:** Summarize the full A/B testing workflow, including preprocessing, conversion rate analysis, z-test, bootstrap confidence intervals, country-level analysis, visualization, and business recommendation.
+
+- [ ] **Time-Based Exploratory Analysis:** The `timestamp` column has been transformed into duration-based features (`elapsed_minutes`, `time_bucket`). These features can be used to explore whether conversion behavior varies across different time intervals within the test period (e.g., novelty effects or time-of-day patterns). Full time-series analysis is not applicable because the original `timestamp` is not stored in a standard datetime format.
