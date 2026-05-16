@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![Pandas](https://img.shields.io/badge/Pandas-Data_Processing-150458.svg)
-![SciPy](https://img.shields.io/badge/SciPy-Statistical_Testing-8CAAE6.svg)
+![Statsmodels](https://img.shields.io/badge/Statsmodels-Statistical_Modeling-green.svg)
 ![Matplotlib](https://img.shields.io/badge/Matplotlib-Visualization-orange.svg)
 
 ## Project Overview
@@ -133,7 +133,7 @@ We broke down the performance by market to check for localized effects:
 | **US** | 12.06% | 11.85% | -1.76% |
 | **CA** | 11.88% | 11.18% | -5.92% |
 
-**Insight (Asymmetric Risk):** While the UK showed a slight positive trend, both the US and CA segments showed negative uplift. The CA segment had the largest relative decline (-5.92%), while the US segment has the largest sample size and therefore strongly influences the overall result. This suggests that the new design does not deliver consistent improvement across markets.
+**Insight (Market-Level Risk):** While the UK showed a slight positive trend, both the US and CA segments showed negative uplift. CA had the largest relative decline (-5.92%), while the US segment had the largest user base and therefore strongly influenced the overall result. This indicates that the new design does not deliver consistent improvement across markets.
 
 ---
 
@@ -194,11 +194,13 @@ Visual reporting was generated to communicate risks to stakeholders clearly. *(C
 - [x] Run Two-Proportion Z-Test
 - [x] Bootstrap Confidence Interval (10,000 iterations)
 - [x] Country Segmentation analysis
+- [x] Country-Level Hypothesis Testing
+- [x] Country-Level Bootstrap Confidence Intervals
 - [x] Data visualizations generated with Matplotlib
 - [x] Final Business Recommendation formulated
 
 ---
 
 ## Next Steps
-- [ ] **Logistic Regression Modeling:** Build models (e.g., `converted ~ new_page * country`) to statistically evaluate the interaction effects between the page version and user demographics.
+- [ ] **Logistic Regression Modeling:** Build models such as `converted ~ new_page`, `converted ~ new_page + country`, and `converted ~ new_page * country` to evaluate whether the page effect remains after controlling for country and whether the treatment effect varies across country segments.
 - [ ] **Time-Series Analysis:** Check for novelty effects (if the conversion rate of the new page changed over the duration of the test).
