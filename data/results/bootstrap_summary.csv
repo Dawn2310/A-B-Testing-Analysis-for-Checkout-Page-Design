@@ -1,0 +1,2 @@
+original_uplift,mean_bootstrap_uplift,ci_lower,ci_upper,n_bootstrap,ci_contains_zero
+-1.3001708994377112,-1.2867638449238712,-3.243567363445678,0.7117393552785911,10000,True
