@@ -1,0 +1,6 @@
+variable,vif,interpretation
+"C(country, Treatment(reference='US'))[T.CA]",2.016531241244046,Acceptable
+"C(country, Treatment(reference='US'))[T.UK]",1.9933795013850415,Acceptable
+treat,1.4260657325243582,Acceptable
+"treat:C(country, Treatment(reference='US'))[T.CA]",2.0882322630033814,Acceptable
+"treat:C(country, Treatment(reference='US'))[T.UK]",2.347744212150055,Acceptable

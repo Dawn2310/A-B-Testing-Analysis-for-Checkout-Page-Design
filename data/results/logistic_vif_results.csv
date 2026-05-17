@@ -1,0 +1,7 @@
+variable,vif,interpretation
+C(country)[T.UK],1.8352481026735015,Acceptable
+C(country)[T.US],3.349797655085719,Acceptable
+C(time_bucket)[T.15-30_min],1.8395284753385668,Acceptable
+C(time_bucket)[T.30-45_min],1.8383773610504426,Acceptable
+C(time_bucket)[T.45-60_min],1.8386782040590095,Acceptable
+treat,1.9156764866445273,Acceptable
