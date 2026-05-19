@@ -42,17 +42,16 @@ The main hypothesis test is two-tailed:
 
 ## Statistical Interpretation Framework
 
-To avoid misinterpreting the A/B test results, this project separates descriptive metrics from inferential statistical evidence.
+To avoid misinterpreting the A/B testing results, this project separates descriptive metrics from inferential statistical evidence.
 
 | Component | Role |
 |---|---|
 | Conversion Rate (CR) | Descriptive metric showing what happened in the observed sample |
-| Absolute Lift / Relative Uplift | Point estimates measuring the direction and size of the observed difference |
-| Z-test / Bootstrap CI | Inferential evidence used to assess whether the observed difference is statistically reliable |
+| Absolute Lift / Relative Uplift | Point estimates measuring the direction and size of the observed difference between the two variants |
+| Z-test / Bootstrap Confidence Interval | Inferential statistical evidence used to assess whether the observed difference is statistically reliable |
 
-A negative uplift alone is not treated as the final conclusion. The final decision must consider the p-value, confidence interval, segment-level risk, and business context together.
-
----
+A negative uplift alone is not treated as the final conclusion.  
+The final decision must consider the p-value, confidence interval, segment-level risk, and business context together.
 
 ## Dataset
 
