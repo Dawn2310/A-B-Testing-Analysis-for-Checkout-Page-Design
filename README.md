@@ -51,6 +51,7 @@ To avoid misinterpreting the A/B test results, this project separates descriptiv
 | Z-test / Bootstrap CI | Inferential evidence used to assess whether the observed difference is statistically reliable |
 
 A negative uplift alone is not treated as the final conclusion. The final decision must consider the p-value, confidence interval, segment-level risk, and business context together.
+
 ---
 
 ## Dataset
