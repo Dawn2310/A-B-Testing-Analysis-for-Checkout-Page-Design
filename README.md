@@ -1,3 +1,6 @@
+
+
+```markdown
 # A/B Testing Analysis for Checkout Page Design
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
@@ -23,6 +26,7 @@ The analysis combines:
 - Country-level bootstrap risk analysis
 - Visualization
 - Logistic regression modeling and diagnostics
+- Business recommendation based on statistical evidence and product risk
 
 **Final Business Recommendation:** Do not roll out the new page at this stage. The new design does not show statistically significant improvement in conversion rate, and the observed uplift is slightly negative. Further design iteration and additional testing are recommended before any full rollout decision.
 
@@ -40,29 +44,32 @@ The main hypothesis test is two-tailed:
 - **Alternative Hypothesis (H₁):** The new checkout page has a different conversion rate compared with the old page.  
   `CR_new ≠ CR_old`
 
+---
+
 ## Statistical Interpretation Framework
 
 To avoid misinterpreting the A/B testing results, this project separates descriptive metrics from inferential statistical evidence.
 
 | Component | Role |
-|---|---|
-| Conversion Rate (CR) | Descriptive metric showing what happened in the observed sample |
-| Absolute Lift / Relative Uplift | Point estimates measuring the direction and size of the observed difference between the two variants |
-| Z-test / Bootstrap Confidence Interval | Inferential statistical evidence used to assess whether the observed difference is statistically reliable |
+| :--- | :--- |
+| **Conversion Rate (CR)** | Descriptive metric showing what happened in the observed sample |
+| **Absolute Lift / Relative Uplift** | Point estimates measuring the direction and size of the observed difference between the two variants |
+| **Z-test / Bootstrap CI** | Inferential statistical evidence used to assess whether the observed difference is statistically reliable |
 
 A negative uplift alone is not treated as the final conclusion.  
 The final decision must consider the p-value, confidence interval, segment-level risk, and business context together.
+
+---
 
 ## Dataset
 
 The analysis is based on two raw datasets.
 
 ### 1. `ab_data.csv`
-
 This is the main A/B testing dataset.
 
 | Column | Description |
-|---|---|
+| :--- | :--- |
 | `user_id` | Unique identifier for each user |
 | `timestamp` | Time-related field from the dataset |
 | `group` | A/B test assignment: `control` or `treatment` |
@@ -70,11 +77,10 @@ This is the main A/B testing dataset.
 | `converted` | Binary outcome: `1` = purchased, `0` = did not purchase |
 
 ### 2. `countries.csv`
-
 This dataset maps each `user_id` to a country.
 
 | Column | Description |
-|---|---|
+| :--- | :--- |
 | `user_id` | Unique identifier for each user |
 | `country` | User country: US, UK, or CA |
 
@@ -85,7 +91,7 @@ This dataset maps each `user_id` to a country.
 ```text
 A-B-Testing-Analysis-for-Checkout-Page-Design/
 │
-├── index.html                              # Interactive HTML report (DAP391m)
+├── index.html                              # Interactive HTML report
 │
 ├── data/
 │   ├── raw/
@@ -115,7 +121,6 @@ A-B-Testing-Analysis-for-Checkout-Page-Design/
 │       ├── logistic_vif_results.csv
 │       └── logistic_vif_interaction_results.csv
 │
-│
 ├── notebooks/
 │   ├── 01_data_preprocessing.ipynb
 │   ├── 02_conversion_rate_ab_test.ipynb
@@ -138,16 +143,22 @@ A-B-Testing-Analysis-for-Checkout-Page-Design/
 │   ├── country_bootstrap_ci.png
 │   └── lift_waterfall.png
 │
+├── paper/
+│   └── survey_AB_test.pdf                  # Reference survey paper
 │
 └── README.md
+
 ```
+
+---
 
 ## Interactive Dashboard
 
-This project also includes a static HTML dashboard:
+This project also includes a static HTML dashboard: `index.html`
 
-```text
-index.html
+The dashboard presents the key A/B testing results, visualizations, logistic regression findings, and final business recommendation. It is designed to be deployed with GitHub Pages.
+*Note: The dashboard uses visual assets stored in the `figures/` directory, so the `figures/` folder must be kept together with `index.html`.*
+
 ---
 
 ## Data Preprocessing
@@ -159,14 +170,14 @@ To ensure the integrity of the statistical analysis, the raw data underwent seve
 In a valid A/B test setup:
 
 | Group | Expected Page |
-|---|---|
-| `control` | `old_page` |
-| `treatment` | `new_page` |
+| --- | --- |
+| control | `old_page` |
+| treatment | `new_page` |
 
 Inconsistent records were removed where:
 
-- users in the `control` group saw `new_page`
-- users in the `treatment` group saw `old_page`
+* Users in the control group saw `new_page`
+* Users in the treatment group saw `old_page`
 
 These records were removed because they create ambiguity between experimental assignment and actual page exposure.
 
@@ -180,23 +191,17 @@ The cleaned A/B test data was merged with the country dataset using `user_id`, f
 
 ### Timestamp Feature Engineering
 
-The original `timestamp` column is not stored in a standard full datetime format. Values appear in a shortened time-like format such as:
+The original timestamp column is not stored in a standard full datetime format. Values appear in a shortened time-like format such as `11:48.6`, `01:45.2`, and `55:06.2`.
 
-```
-11:48.6
-01:45.2
-55:06.2
-```
-
-To avoid datetime parsing errors, the `timestamp` column was kept as text and transformed into duration-based features:
+To avoid datetime parsing errors, the timestamp column was kept as text and transformed into duration-based features:
 
 | Feature | Description |
-|---|---|
+| --- | --- |
 | `time_raw` | Original timestamp value preserved as text |
 | `elapsed_minutes` | Timestamp converted into elapsed minutes |
 | `time_bucket` | Grouped time interval for exploratory binning |
 
-The `time_bucket` feature is later used as a robustness covariate in logistic regression.
+*The `time_bucket` feature is later used as a robustness covariate in logistic regression.*
 
 ---
 
@@ -205,13 +210,13 @@ The `time_bucket` feature is later used as a robustness covariate in logistic re
 After preprocessing, descriptive conversion metrics were calculated.
 
 | Metric | Value |
-|---|---|
+| --- | --- |
 | Old Page CR | 12.03% |
 | New Page CR | 11.87% |
 | Absolute Lift | -0.156 percentage points |
 | Relative Uplift | -1.30% |
 
-The old page achieved a slightly higher conversion rate than the new page.
+*The old page achieved a slightly higher conversion rate than the new page.*
 
 ---
 
@@ -220,15 +225,13 @@ The old page achieved a slightly higher conversion rate than the new page.
 A two-proportion z-test was used to determine whether the observed difference in conversion rates was statistically significant.
 
 | Metric | Value |
-|---|---|
+| --- | --- |
 | Z-statistic | -1.2949 |
 | P-value | 0.1953 |
 | Alpha | 0.05 |
 | Decision | Fail to reject H₀ |
 
-Since the p-value is greater than 0.05, there is not enough statistical evidence to conclude that the conversion rates of the old page and new page are significantly different.
-
-The observed drop in conversion rate is **not statistically significant**.
+Since the p-value is greater than 0.05, there is not enough statistical evidence to conclude that the conversion rates of the old page and new page are significantly different. The observed drop in conversion rate is not statistically significant.
 
 ---
 
@@ -237,90 +240,69 @@ The observed drop in conversion rate is **not statistically significant**.
 To estimate the uncertainty of the observed uplift, bootstrap resampling was applied.
 
 | Metric | Value |
-|---|---|
+| --- | --- |
 | Simulation | 10,000 bootstrap iterations |
 | Original Uplift | -1.30% |
 | Mean Bootstrap Uplift | -1.29% |
 | 95% Bootstrap CI | [-3.24%, +0.71%] |
 
-The mean bootstrap uplift is negative, suggesting that the new page tends to underperform the old page in repeated resampling.
-
-However, the **95% confidence interval crosses zero**. This means the observed negative uplift is not statistically robust.
-
-This supports the previous two-proportion z-test conclusion that there is not enough evidence to claim a significant difference between the two pages.
+The mean bootstrap uplift is negative, suggesting that the new page tends to underperform the old page in repeated resampling. However, the 95% confidence interval crosses zero. This means the observed negative uplift is not statistically robust. This supports the previous two-proportion z-test conclusion that there is not enough evidence to claim a significant difference between the two pages.
 
 ---
-## Country-Level Deep Dive and Heterogeneous Treatment Effects
+
+## Country-Level Deep Dive & Heterogeneous Treatment Effects
 
 To examine whether the treatment effect varies across markets, a country-level analysis was conducted. Instead of interpreting each segment separately, this section evaluates whether the redesigned page produces heterogeneous treatment effects across countries.
-
-The country-level analysis includes:
-
-- conversion rate and uplift by country
-- country-level two-proportion z-tests
-- country-level bootstrap confidence intervals
-- Bonferroni correction for multiple comparisons
 
 ### Country-Level Descriptive Results
 
 | Country | Old Page CR | New Page CR | Relative Uplift |
-|---|---:|---:|---:|
-| UK | 12.00% | 12.11% | +0.92% |
-| US | 12.06% | 11.85% | -1.76% |
-| CA | 11.88% | 11.18% | -5.92% |
+| --- | --- | --- | --- |
+| **UK** | 12.00% | 12.11% | +0.92% |
+| **US** | 12.06% | 11.85% | -1.76% |
+| **CA** | 11.88% | 11.18% | -5.92% |
 
 The UK segment shows a small positive descriptive uplift, while the US and CA segments show negative uplift. CA has the largest negative relative uplift, while the US segment has the largest user base and therefore strongly influences the overall result.
 
 ### Country-Level Statistical Testing
 
 Country-level two-proportion z-tests were conducted for CA, UK, and US. Since multiple country-level tests were performed, Bonferroni correction was applied:
+`alpha_corrected = 0.05 / 3 = 0.0167`
 
-```markdown
-```text
-alpha_corrected = 0.05 / 3 = 0.0167
+None of the country-level p-values passed either the original 0.05 threshold or the Bonferroni-corrected threshold. Therefore, there is no statistically reliable evidence that the treatment effect differs significantly within any individual country.
 
-## Country-Level Bootstrap Confidence Intervals
-
-Country-level bootstrap confidence intervals were computed to estimate the uncertainty of uplift in each market.
+### Country-Level Bootstrap Confidence Intervals
 
 | Country | Original Uplift | Mean Bootstrap Uplift | 95% Bootstrap CI | Contains 0 |
-|---|---|---|---|---|
-| CA | -5.92% | -5.82% | [-14.29%, +3.11%] | True |
-| UK | +0.92% | +0.93% | [-3.00%, +4.95%] | True |
-| US | -1.76% | -1.76% | [-4.09%, +0.62%] | True |
+| --- | --- | --- | --- | --- |
+| **CA** | -5.92% | -5.82% | [-14.29%, +3.11%] | True |
+| **UK** | +0.92% | +0.93% | [-3.00%, +4.95%] | True |
+| **US** | -1.76% | -1.76% | [-4.09%, +0.62%] | True |
 
-All country-level bootstrap confidence intervals contain zero.
-
-This means that **none of the country-specific uplift estimates are statistically robust**.
+All country-level bootstrap confidence intervals contain zero. This means that none of the country-specific uplift estimates are statistically robust.
 
 ### Product Risk Insight: Canada Segment
 
 The Canadian market shows the largest negative descriptive uplift among all countries.
 
 | Metric | Value |
-|---|---|
+| --- | --- |
 | Original uplift | -5.92% |
 | Mean bootstrap uplift | -5.82% |
 | 95% Bootstrap CI | [-14.29%, +3.11%] |
 
-Although the confidence interval contains 0, the **risk profile is asymmetric**.
+Although the confidence interval contains 0, the risk profile is **asymmetric**. The possible upside is limited to about +3.11%, while the downside range extends to approximately -14.29%.
 
-- The possible upside is limited to about **+3.11%**, while the downside range extends to approximately **-14.29%**.
-
-From a product risk perspective, this is concerning. Even though the result is not statistically significant, the potential downside in CA is too large to ignore.
-
-This supports the recommendation **not to roll out the new page** at this stage.
+From a product risk perspective, this is concerning. Even though the result is not statistically significant, the potential downside in CA is too large to ignore. This strongly supports the recommendation not to roll out the new page at this stage.
 
 ---
 
 ## Visualization
 
-Visual reporting was generated to communicate results and risks clearly.
-
-The following figures were created and saved in the `figures/` directory:
+Visual reporting was generated to communicate results and risks clearly. The following figures were created and saved in the `figures/` directory:
 
 | Figure | Description |
-|---|---|
+| --- | --- |
 | `cr_bar_chart.png` | Basic conversion rate comparison between old page and new page |
 | `cr_bar_ci.png` | Conversion rate comparison with 95% confidence intervals |
 | `bootstrap_uplift_distribution.png` | Bootstrap distribution of relative uplift |
@@ -333,27 +315,23 @@ The following figures were created and saved in the `figures/` directory:
 
 ## Logistic Regression Modeling
 
-Logistic regression was applied as a complementary inference model, not as a pure classification model.
-
-The goal was not to maximize prediction accuracy. Instead, the goal was to test whether treatment assignment is associated with conversion probability after controlling for country and time-related variation.
-
-This modeling step is used to validate whether the conclusions from the z-test, bootstrap confidence interval, and country-level analysis remain stable under a multivariate statistical model.
+Logistic regression was applied as a complementary inference model, not as a pure classification model. The goal was not to maximize prediction accuracy. Instead, the goal was to test whether treatment assignment is associated with conversion probability after controlling for country and time-related variation.
 
 ### Models
 
 | Model | Formula | Purpose |
-|---|---|---|
-| Model 1 | `converted ~ treat` | Baseline treatment-only model |
-| Model 2 | `converted ~ treat + C(country)` | Country-adjusted model |
-| Model 2b | `converted ~ treat + C(country) + C(time_bucket)` | Country and time-adjusted robustness model |
-| Model 3 | `converted ~ treat * C(country, Treatment(reference='US'))` | Heterogeneous treatment effect model |
+| --- | --- | --- |
+| **Model 1** | `converted ~ treat` | Baseline treatment-only model |
+| **Model 2** | `converted ~ treat + C(country)` | Country-adjusted model |
+| **Model 2b** | `converted ~ treat + C(country) + C(time_bucket)` | Country and time-adjusted robustness model |
+| **Model 3** | `converted ~ treat * C(country, Treatment(reference='US'))` | Heterogeneous treatment effect model |
 
 ### Balance Checks
 
 After preprocessing, the treatment and control groups remained well-balanced.
 
 | Check | Result |
-|---|---|
+| --- | --- |
 | Sample size | Balanced |
 | Country distribution | Balanced |
 | Time bucket distribution | Balanced |
@@ -363,66 +341,60 @@ After preprocessing, the treatment and control groups remained well-balanced.
 Across all logistic regression models, the treatment coefficient remained negative but statistically non-significant.
 
 | Model | Treatment Odds Ratio | p-value | Interpretation |
-|---|---|---|---|
-| Basic treatment-only | 0.9852 | 0.195 | Not significant |
-| Country-adjusted | 0.9853 | 0.197 | Not significant |
-| Country + time adjusted | 0.9852 | 0.195 | Not significant |
-| Country interaction | 0.9801 | 0.142 | Not significant |
+| --- | --- | --- | --- |
+| **Basic treatment-only** | 0.9852 | 0.195 | Not significant |
+| **Country-adjusted** | 0.9853 | 0.197 | Not significant |
+| **Country + time adjusted** | 0.9852 | 0.195 | Not significant |
+| **Country interaction** | 0.9801 | 0.142 | Not significant |
 
-The treatment odds ratio is consistently below 1, indicating that the new page is associated with slightly lower conversion odds.
-
-However, the effect is **not statistically significant** in any model.
+The treatment odds ratio is consistently below 1, indicating that the new page is associated with slightly lower conversion odds. However, the effect is not statistically significant in any model.
 
 ### Interaction Model
 
-The interaction model used **US** as the reference country because it has the largest sample size.
-
-The interaction terms for CA and UK were **not statistically significant**.
-
-This means there is no reliable evidence that the treatment effect differs significantly across countries.
+The interaction model used US as the reference country because it has the largest sample size. The interaction terms for CA and UK were not statistically significant. This means there is no reliable evidence that the treatment effect differs significantly across countries.
 
 ### Model Diagnostics
 
 Model comparison showed that adding country, time bucket, and interaction terms did not substantially improve model fit.
 
 | Diagnostic | Result |
-|---|---|
-| AIC / BIC | More complex models did not provide meaningful improvement |
-| Pseudo R² | Extremely small across all models |
-| LLR p-values | All above 0.05 |
-| VIF | All variables within acceptable range |
+| --- | --- |
+| **AIC / BIC** | More complex models did not provide meaningful improvement |
+| **Pseudo R²** | Extremely small across all models |
+| **LLR p-values** | All above 0.05 |
+| **VIF** | All variables within acceptable range |
 
-The VIF results showed **no severe multicollinearity problem**.
-
-Therefore, the logistic regression results support the earlier z-test, bootstrap, and country-level findings.
+The VIF results showed no severe multicollinearity problem. Therefore, the logistic regression results completely support the earlier z-test, bootstrap, and country-level findings.
 
 ---
+
 ## Guardrails and Decision Matrix
 
 The final rollout recommendation is based on both statistical evidence and business risk. The decision rule is defined before making the final recommendation.
 
 | Scenario | Statistical Condition | Business Risk Condition | Action | Status |
-|---|---|---|---|---|
-| Ideal Rollout | p-value < 0.05 and 95% CI strictly above 0 | Positive or neutral across key markets | Full rollout | Not met |
-| No Reliable Improvement | p-value >= 0.05 or 95% CI contains 0 | No clear positive effect | Do not rollout | Met globally |
-| Segment Risk | Country-level effect is uncertain but downside risk is large | Large asymmetric downside in a market | Defer rollout / regional holdback | Met in CA |
+| --- | --- | --- | --- | --- |
+| **Ideal Rollout** | p-value < 0.05 and 95% CI strictly above 0 | Positive or neutral across key markets | Full rollout | ❌ Not met |
+| **No Reliable Improvement** | p-value >= 0.05 or 95% CI contains 0 | No clear positive effect | Do not rollout | ✅ **Met globally** |
+| **Segment Risk** | Country-level effect is uncertain but downside risk is large | Large asymmetric downside in a market | Defer rollout / regional holdback | ✅ **Met in CA** |
 
 ### Applied Decision Rules
 
-1. The global z-test was not statistically significant.
-2. The global bootstrap confidence interval contains 0.
-3. No country-level result was statistically significant.
-4. The CA segment shows large downside risk.
-5. Logistic regression does not show reliable treatment improvement.
-6. Country and time adjustments do not change the conclusion.
-7. Interaction terms do not support targeted rollout by country.
+* The global z-test was not statistically significant.
+* The global bootstrap confidence interval contains 0.
+* No country-level result was statistically significant.
+* The CA segment shows large downside risk.
+* Logistic regression does not show reliable treatment improvement.
+* Country and time adjustments do not change the conclusion.
+* Interaction terms do not support targeted rollout by country.
 
-Based on these rules, the new page should not be rolled out at this stage.
+**Based on these rules, the new page should not be rolled out at this stage.**
+
+---
+
 ## Final Business Recommendation
 
-Based on all statistical and modeling evidence, the recommendation is:
-
-> **Do not roll out the new page at this stage.**
+Based on all statistical and modeling evidence, the recommendation is: **Do not roll out the new page at this stage.**
 
 **Reasons:**
 
@@ -430,40 +402,40 @@ Based on all statistical and modeling evidence, the recommendation is:
 2. The overall z-test is not statistically significant.
 3. The bootstrap confidence interval contains zero.
 4. No country-level result is statistically significant.
-5. CA shows a large downside risk.
+5. CA shows a large asymmetric downside risk.
 6. Logistic regression does not show reliable treatment improvement.
 7. Country and time adjustments do not change the conclusion.
 8. Interaction terms do not support targeted rollout by country.
 
-Further redesign and additional testing are recommended before considering deployment.
+*Further redesign and additional testing are recommended before considering deployment.*
 
 ---
 
 ## Current Progress
 
-- [x] Load raw datasets
-- [x] Missing value and duplicate user checks
-- [x] Assignment-page mismatch filtering
-- [x] Merge country information
-- [x] Timestamp feature engineering
-- [x] Conversion Rate, Lift, and Uplift analysis
-- [x] Two-Proportion Z-Test
-- [x] Bootstrap Confidence Interval with 10,000 iterations
-- [x] Country-level Heterogeneous Treatment Effect analysis
-- [x] Country-level hypothesis testing
-- [x] Country-level bootstrap confidence intervals
-- [x] Data visualizations generated with Matplotlib
-- [x] Logistic Regression Modeling
-- [x] Logistic Regression Diagnostics
-- [x] Decision Matrix and Business Recommendation
+* [x] Load raw datasets
+* [x] Missing value and duplicate user checks
+* [x] Assignment-page mismatch filtering
+* [x] Merge country information
+* [x] Timestamp feature engineering
+* [x] Conversion Rate, Lift, and Uplift analysis
+* [x] Two-Proportion Z-Test
+* [x] Bootstrap Confidence Interval with 10,000 iterations
+* [x] Country-level Heterogeneous Treatment Effect analysis
+* [x] Country-level hypothesis testing
+* [x] Country-level bootstrap confidence intervals
+* [x] Data visualizations generated with Matplotlib
+* [x] Logistic Regression Modeling
+* [x] Logistic Regression Diagnostics
+* [x] Decision Matrix and Business Recommendation
 
 ---
 
 ## Next Steps
 
-- [ ] **Final Report:** Summarize the full A/B testing workflow, including preprocessing, conversion rate analysis, z-test, bootstrap confidence intervals, country-level analysis, visualization, logistic regression, and business recommendation.
-- [ ] **Optional Bayesian A/B Testing:** Estimate the posterior probability that treatment outperforms control using a Beta-Binomial model.
-- [ ] **Optional Business Impact Scenario Analysis:** Estimate potential conversion gain or loss under different traffic scenarios.
+* [ ] **Final Report:** Summarize the full A/B testing workflow, including preprocessing, conversion rate analysis, z-test, bootstrap confidence intervals, country-level analysis, visualization, logistic regression, and business recommendation.
+* [ ] **Optional Bayesian A/B Testing:** Estimate the posterior probability that treatment outperforms control using a Beta-Binomial model.
+* [ ] **Optional Business Impact Scenario Analysis:** Estimate potential conversion gain or loss under different traffic scenarios.
 
 ---
 
@@ -471,14 +443,16 @@ Further redesign and additional testing are recommended before considering deplo
 
 The current dataset does not include:
 
-- Revenue
-- Device type
-- Traffic source
-- Funnel steps
-- Cart value
-- User type
-- Detailed session behavior
+* Revenue
+* Device type
+* Traffic source
+* Funnel steps
+* Cart value
+* User type
+* Detailed session behavior
 
-Therefore, the current analysis focuses on **conversion rate** rather than revenue per session, device-level effects, or funnel drop-off behavior.
+Therefore, the current analysis focuses on conversion rate rather than revenue per session, device-level effects, or funnel drop-off behavior. Future work could be improved with richer behavioral and business features.
 
-Future work could be improved with richer behavioral and business features.
+```
+
+```
