@@ -1,0 +1,3905 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A/B Testing Analysis — Checkout Page Design | DAP391m Project</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&display=swap"
+    rel="stylesheet">
+  <!-- Chart.js for real interactive charts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <!-- MathJax for academic formula rendering (optional, lightweight) -->
+  <script>
+    window.MathJax = { tex: { inlineMath: [['$','$'], ['\\(','\\)']] }, svg: { fontCache: 'global' } };
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --surface2: #16161f;
+      --border: #ffffff0f;
+      --border2: #ffffff18;
+      --text: #e8e8f0;
+      --muted: #7070a0;
+      --accent: #6c63ff;
+      --accent2: #ff6b6b;
+      --accent3: #43e8a0;
+      --accent4: #ffb347;
+      --neg: #ff4d6d;
+      --pos: #43e8a0;
+      --warn: #ffb347;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* NOISE OVERLAY */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.4;
+    }
+
+    /* GRID BG */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      height: 64px;
+      background: rgba(10, 10, 15, 0.7);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: color 0.25s ease;
+      position: relative;
+      padding: 4px 0;
+    }
+
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      width: 0;
+      height: 1px;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    .nav-links a:hover::after {
+      width: 100%;
+    }
+
+    .verdict-badge {
+      background: rgba(255, 77, 109, 0.12);
+      border: 1px solid rgba(255, 77, 109, 0.35);
+      color: var(--neg);
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      padding: 5px 14px;
+      text-transform: uppercase;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .verdict-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--neg);
+      border-radius: 50%;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    /* MAIN WRAPPER */
+    main {
+      position: relative;
+      z-index: 1;
+      padding-top: 64px;
+    }
+
+    /* HERO */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 80px 48px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-glow {
+      position: absolute;
+      width: 700px;
+      height: 700px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(108, 99, 255, 0.15) 0%, transparent 70%);
+      top: -200px;
+      right: -200px;
+      pointer-events: none;
+      animation: pulse 6s ease-in-out infinite;
+      filter: blur(40px);
+    }
+
+    .hero-glow-2 {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(67, 232, 160, 0.08) 0%, transparent 70%);
+      bottom: -150px;
+      left: -100px;
+      pointer-events: none;
+      animation: pulse 8s ease-in-out infinite 1s;
+      filter: blur(50px);
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      50% {
+        transform: scale(1.15);
+        opacity: 0.6;
+      }
+    }
+
+    .hero-label {
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 24px;
+      animation: fadeUp 0.6s ease forwards;
+    }
+
+    .hero-title {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(48px, 7vw, 96px);
+      font-weight: 600;
+      line-height: 1.0;
+      letter-spacing: -0.02em;
+      max-width: 900px;
+      margin-bottom: 32px;
+      animation: fadeUp 0.6s 0.1s ease both;
+    }
+
+    .hero-title em {
+      font-style: italic;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent3) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      position: relative;
+      display: inline-block;
+    }
+
+    .hero-title em::after {
+      content: '';
+      position: absolute;
+      bottom: 0.08em;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent3));
+      transform: scaleX(0);
+      transform-origin: left;
+      animation: underlineSlide 1.2s 0.8s ease forwards;
+    }
+
+    @keyframes underlineSlide {
+      to { transform: scaleX(1); }
+    }
+
+    .hero-sub {
+      font-size: 15px;
+      color: var(--muted);
+      max-width: 560px;
+      line-height: 1.8;
+      margin-bottom: 64px;
+      animation: fadeUp 0.6s 0.2s ease both;
+    }
+
+    .hero-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      max-width: 800px;
+      animation: fadeUp 0.6s 0.3s ease both;
+    }
+
+    .stat-cell {
+      background: var(--surface);
+      padding: 32px 28px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-cell::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top right, rgba(108, 99, 255, 0.06), transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    .stat-cell:hover {
+      background: var(--surface2);
+    }
+
+    .stat-cell:hover::before {
+      opacity: 1;
+    }
+
+    .stat-label {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .stat-value.neg {
+      color: var(--neg);
+    }
+
+    .stat-value.pos {
+      color: var(--pos);
+    }
+
+    .stat-value.neu {
+      color: var(--accent);
+    }
+
+    .stat-value.warn {
+      color: var(--warn);
+    }
+
+    .stat-note {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* SECTIONS */
+    section {
+      padding: 100px 48px;
+      border-top: 1px solid var(--border);
+    }
+
+    .section-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .section-tag::before {
+      content: '';
+      display: block;
+      width: 24px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    .section-title {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(32px, 4vw, 52px);
+      font-weight: 600;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+      margin-bottom: 48px;
+    }
+
+    /* HYPOTHESIS */
+    .hypothesis-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 48px;
+    }
+
+    .hyp-card {
+      background: var(--surface);
+      padding: 40px;
+    }
+
+    .hyp-label {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .hyp-formula {
+      font-family: 'Fraunces', serif;
+      font-size: 22px;
+      font-style: italic;
+      color: var(--text);
+      line-height: 1.4;
+      margin-bottom: 12px;
+    }
+
+    .hyp-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* DATA TABLE */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 32px;
+    }
+
+    .data-table th {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 12px 20px;
+      text-align: left;
+      border-bottom: 1px solid var(--border2);
+      font-weight: 500;
+    }
+
+    .data-table td {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      vertical-align: middle;
+    }
+
+    .data-table tr:hover td {
+      background: var(--surface2);
+    }
+
+    .data-table .mono {
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* METRIC CARDS */
+    .metrics-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 48px;
+    }
+
+    .metric-card {
+      background: var(--surface);
+      padding: 36px 32px;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .metric-card:hover {
+      background: var(--surface2);
+    }
+
+    .metric-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent3));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .metric-card:hover::after {
+      transform: scaleX(1);
+    }
+
+    .metric-name {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .metric-val {
+      font-family: 'Syne', sans-serif;
+      font-size: 38px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 10px;
+      letter-spacing: -0.01em;
+    }
+
+    .metric-sub {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* ZTEST BOX */
+    .ztest-result {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+
+    .ztest-cell {
+      background: var(--surface);
+      padding: 32px;
+      text-align: center;
+    }
+
+    .ztest-label {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .ztest-value {
+      font-family: 'Syne', sans-serif;
+      font-size: 32px;
+      font-weight: 800;
+    }
+
+    /* VERDICT BOX */
+    .verdict-box {
+      background: rgba(255, 77, 109, 0.06);
+      border: 1px solid rgba(255, 77, 109, 0.25);
+      padding: 32px 40px;
+      margin-bottom: 32px;
+      position: relative;
+    }
+
+    .verdict-box::before {
+      content: '✗ FAIL TO REJECT H₀';
+      position: absolute;
+      top: -1px;
+      right: 24px;
+      background: var(--neg);
+      color: #fff;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      padding: 4px 12px;
+      transform: translateY(-50%);
+    }
+
+    .verdict-text {
+      font-family: 'Fraunces', serif;
+      font-size: 20px;
+      font-weight: 300;
+      font-style: italic;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .verdict-box.pos-verdict {
+      background: rgba(67, 232, 160, 0.06);
+      border-color: rgba(67, 232, 160, 0.25);
+    }
+
+    /* BOOTSTRAP SECTION */
+    .bootstrap-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      margin-bottom: 48px;
+    }
+
+    .bootstrap-chart {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 32px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .chart-title {
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+
+    /* D3-style bar chart using CSS */
+    .dist-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 120px;
+      margin-bottom: 8px;
+    }
+
+    .dist-bar {
+      flex: 1;
+      border-radius: 2px 2px 0 0;
+      transition: opacity 0.2s;
+    }
+
+    .dist-bar.neg-bar {
+      background: rgba(255, 77, 109, 0.7);
+    }
+
+    .dist-bar.pos-bar {
+      background: rgba(67, 232, 160, 0.7);
+    }
+
+    .dist-bar:hover {
+      opacity: 0.8;
+    }
+
+    .dist-axis {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .zero-line {
+      position: absolute;
+      background: rgba(255, 255, 255, 0.2);
+      width: 1px;
+      height: 120px;
+    }
+
+    .ci-visual {
+      position: relative;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      margin: 16px 0;
+    }
+
+    .ci-line {
+      position: absolute;
+      height: 2px;
+      background: var(--border2);
+      left: 0;
+      right: 0;
+    }
+
+    .ci-range {
+      position: absolute;
+      height: 8px;
+      background: rgba(108, 99, 255, 0.3);
+      border-left: 2px solid var(--accent);
+      border-right: 2px solid var(--accent);
+      left: 15%;
+      right: 55%;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .ci-zero {
+      position: absolute;
+      left: 50%;
+      height: 20px;
+      width: 2px;
+      background: rgba(255, 255, 255, 0.4);
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .ci-mean {
+      position: absolute;
+      left: 34%;
+      width: 10px;
+      height: 10px;
+      background: var(--neg);
+      border-radius: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .ci-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* COUNTRY TABLE */
+    .country-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 48px;
+    }
+
+    .country-card {
+      background: var(--surface);
+      padding: 36px 32px;
+      position: relative;
+    }
+
+    .country-flag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 32px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      margin-bottom: 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      color: var(--text);
+    }
+
+    .country-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 0.05em;
+      margin-bottom: 20px;
+    }
+
+    .country-stat {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+    }
+
+    .country-stat:last-child {
+      border-bottom: none;
+    }
+
+    .country-stat-label {
+      color: var(--muted);
+    }
+
+    .country-uplift {
+      font-family: 'Syne', sans-serif;
+      font-size: 24px;
+      font-weight: 800;
+      margin: 16px 0 8px;
+    }
+
+    .risk-badge {
+      display: inline-block;
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+    }
+
+    .risk-high {
+      background: rgba(255, 77, 109, 0.15);
+      color: var(--neg);
+    }
+
+    .risk-med {
+      background: rgba(255, 179, 71, 0.15);
+      color: var(--warn);
+    }
+
+    .risk-low {
+      background: rgba(67, 232, 160, 0.15);
+      color: var(--pos);
+    }
+
+    /* LOGISTIC REGRESSION */
+    .model-tabs {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--border);
+      margin-bottom: 32px;
+      overflow: hidden;
+    }
+
+    .model-tab {
+      flex: 1;
+      padding: 16px 20px;
+      background: var(--surface);
+      border: none;
+      border-right: 1px solid var(--border);
+      cursor: pointer;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .model-tab:last-child {
+      border-right: none;
+    }
+
+    .model-tab:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .model-tab.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .model-content {
+      display: none;
+    }
+
+    .model-content.active {
+      display: block;
+    }
+
+    .odds-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+    }
+
+    .odds-table th {
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 10px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border2);
+      font-weight: 500;
+    }
+
+    .odds-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .odds-table tr:hover td {
+      background: var(--surface2);
+    }
+
+    .or-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .or-fill {
+      height: 6px;
+      border-radius: 3px;
+      min-width: 2px;
+    }
+
+    .or-fill.or-neg {
+      background: var(--neg);
+    }
+
+    .or-fill.or-pos {
+      background: var(--pos);
+    }
+
+    .or-fill.or-neu {
+      background: var(--muted);
+    }
+
+    /* MODEL COMPARISON */
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 48px;
+    }
+
+    .comp-cell {
+      background: var(--surface);
+      padding: 28px 24px;
+    }
+
+    .comp-header {
+      background: var(--surface2) !important;
+    }
+
+    .comp-model {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .comp-formula {
+      font-size: 10px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .comp-metric {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .comp-label {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    /* CANADA RISK */
+    .ca-risk-box {
+      background: var(--surface);
+      border: 1px solid rgba(255, 77, 109, 0.3);
+      padding: 40px;
+      margin-bottom: 48px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ca-risk-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--neg);
+    }
+
+    .risk-meter {
+      position: relative;
+      height: 32px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 4px;
+      margin: 24px 0;
+      overflow: hidden;
+    }
+
+    .risk-meter-neg {
+      position: absolute;
+      left: 0;
+      width: 82%;
+      height: 100%;
+      background: linear-gradient(90deg, rgba(255, 77, 109, 0.7), rgba(255, 77, 109, 0.3));
+      border-radius: 4px;
+    }
+
+    .risk-meter-pos {
+      position: absolute;
+      right: 0;
+      width: 18%;
+      height: 100%;
+      background: rgba(67, 232, 160, 0.3);
+      border-radius: 4px;
+    }
+
+    .risk-meter-label {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 11px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+    }
+
+    .risk-meter-label.left {
+      left: 12px;
+      color: #fff;
+    }
+
+    .risk-meter-label.right {
+      right: 12px;
+      color: var(--pos);
+    }
+
+    /* INSIGHT BOXES */
+    .insight-box {
+      background: rgba(108, 99, 255, 0.06);
+      border: 1px solid rgba(108, 99, 255, 0.2);
+      border-left: 3px solid var(--accent);
+      padding: 24px 28px;
+      margin-bottom: 24px;
+      font-size: 13px;
+      line-height: 1.8;
+      color: var(--text);
+    }
+
+    /* RECOMMENDATION */
+    .rec-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 64px 48px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .rec-section::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(255, 77, 109, 0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .rec-title {
+      font-family: 'Fraunces', serif;
+      font-size: clamp(36px, 5vw, 64px);
+      font-weight: 600;
+      line-height: 1.1;
+      margin-bottom: 24px;
+    }
+
+    .rec-title .highlight {
+      color: var(--neg);
+      font-style: italic;
+    }
+
+    .rec-reasons {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin: 48px 0;
+      text-align: left;
+    }
+
+    .rec-reason {
+      background: var(--bg);
+      padding: 28px;
+    }
+
+    .rec-reason-num {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 36px;
+      color: rgba(255, 77, 109, 0.25);
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+
+    .rec-reason-text {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    /* CODE BLOCK */
+    .code-block {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 24px 28px;
+      margin-bottom: 24px;
+      font-size: 12px;
+      line-height: 1.8;
+      overflow-x: auto;
+    }
+
+    .code-block .kw {
+      color: var(--accent);
+    }
+
+    .code-block .str {
+      color: var(--pos);
+    }
+
+    .code-block .num {
+      color: var(--warn);
+    }
+
+    .code-block .cmt {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .code-block .fn {
+      color: #e0a4ff;
+    }
+
+    /* TAG */
+    .tag {
+      display: inline-block;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      padding: 3px 10px;
+      border-radius: 2px;
+      text-transform: uppercase;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      margin-left: 8px;
+    }
+
+    .tag-sig {
+      background: rgba(255, 77, 109, 0.15);
+      color: var(--neg);
+    }
+
+    .tag-ns {
+      background: rgba(112, 112, 160, 0.2);
+      color: var(--muted);
+    }
+
+    .tag-warn {
+      background: rgba(255, 179, 71, 0.15);
+      color: var(--warn);
+    }
+
+    /* PIPELINE */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .pipeline-step {
+      flex: 1;
+      min-width: 120px;
+      padding: 20px 16px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      text-align: center;
+      position: relative;
+    }
+
+    .pipeline-step:last-child {
+      border-right: none;
+    }
+
+    .pipeline-step.done {
+      background: rgba(67, 232, 160, 0.04);
+    }
+
+    .pipeline-step.todo {
+      background: rgba(108, 99, 255, 0.04);
+    }
+
+    .pipeline-icon {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 18px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      letter-spacing: 0.05em;
+    }
+
+    .pipeline-step.done .pipeline-icon {
+      color: var(--pos);
+    }
+
+    .pipeline-step.todo .pipeline-icon {
+      color: var(--accent);
+    }
+
+    .pipeline-name {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text);
+      line-height: 1.4;
+    }
+
+    .pipeline-status {
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .pipeline-step.done .pipeline-status {
+      color: var(--pos);
+    }
+
+    .pipeline-step.todo .pipeline-status {
+      color: var(--accent);
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--muted);
+      font-size: 11px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* SCROLLBAR */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 3px;
+    }
+
+    /* DIVIDER */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 48px 0;
+    }
+
+    /* =========================================================
+       NEW COMPONENTS FOR CONFERENCE-GRADE VERSION
+       ========================================================= */
+
+    /* SCROLL PROGRESS BAR */
+    .scroll-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent3));
+      z-index: 200;
+      width: 0%;
+      transition: width 0.1s ease-out;
+    }
+
+    /* LOGO IN NAV */
+    .nav-logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .nav-logo-img {
+      width: 28px;
+      height: 28px;
+      object-fit: contain;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      padding: 4px;
+    }
+
+    .nav-logo-img.placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 11px;
+    }
+
+    /* ABSTRACT (Academic format) */
+    .abstract-section {
+      padding: 80px 48px 40px;
+      max-width: 940px;
+      margin: 0 auto;
+    }
+
+    .abstract-box {
+      background: linear-gradient(180deg, var(--surface) 0%, rgba(17, 17, 24, 0.6) 100%);
+      border: 1px solid var(--border2);
+      border-left: 3px solid var(--accent);
+      padding: 44px 52px;
+      position: relative;
+      backdrop-filter: blur(10px);
+    }
+
+    .abstract-box::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle at top right, rgba(108, 99, 255, 0.08), transparent 70%);
+      pointer-events: none;
+    }
+
+    .abstract-label {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 11px;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 24px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .abstract-label::before {
+      content: '';
+      width: 24px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    .abstract-text {
+      font-family: 'Fraunces', serif;
+      font-size: 15.5px;
+      line-height: 1.9;
+      color: var(--text);
+      font-weight: 300;
+      text-align: justify;
+      letter-spacing: 0.005em;
+    }
+
+    .abstract-keywords {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .abstract-keywords strong {
+      font-family: 'Syne', sans-serif;
+      color: var(--text);
+      letter-spacing: 0.15em;
+      font-size: 10px;
+      text-transform: uppercase;
+      margin-right: 12px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+
+    .keyword-tag {
+      display: inline-block;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      margin: 4px 4px 0 0;
+      font-size: 11px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      transition: all 0.2s ease;
+      cursor: default;
+    }
+
+    .keyword-tag:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    /* TEAM SECTION */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+
+    .team-card {
+      background: var(--surface);
+      padding: 48px 32px;
+      text-align: center;
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .team-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent3));
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.4s ease;
+    }
+
+    .team-card:hover {
+      background: var(--surface2);
+      transform: translateY(-4px);
+    }
+
+    .team-card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .team-card:hover .team-avatar {
+      transform: scale(1.05);
+      box-shadow: 0 0 40px rgba(108, 99, 255, 0.25);
+    }
+
+    .team-avatar {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent3) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 24px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 28px;
+      color: #fff;
+      letter-spacing: 0.02em;
+      border: 2px solid var(--border2);
+      transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    .team-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .team-role {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+    }
+
+    .team-contrib {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.75;
+      min-height: 56px;
+    }
+
+    /* INSTITUTION BANNER */
+    .institution-banner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      padding: 28px 32px;
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface2) 100%);
+      border: 1px solid var(--border2);
+      margin-bottom: 32px;
+      flex-wrap: wrap;
+      transition: all 0.3s ease;
+    }
+
+    .institution-banner:hover {
+      border-color: rgba(108, 99, 255, 0.3);
+    }
+
+    .institution-logo {
+      width: 60px;
+      height: 60px;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 15px;
+      color: var(--accent);
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .institution-info {
+      text-align: left;
+    }
+
+    .institution-name {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.05em;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .institution-sub {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      font-family: 'DM Mono', monospace;
+    }
+
+    /* CHART CANVAS WRAPPER (Chart.js) */
+    .chart-wrap {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 24px 28px;
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    .chart-wrap-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .chart-wrap-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .chart-canvas-host {
+      position: relative;
+      width: 100%;
+      height: 320px;
+    }
+
+    .chart-canvas-host.tall {
+      height: 380px;
+    }
+
+    .chart-canvas-host.short {
+      height: 220px;
+    }
+
+    /* INTERACTIVE SIMULATOR */
+    .sim-panel {
+      background: linear-gradient(135deg, var(--surface) 0%, rgba(22, 22, 31, 0.7) 100%);
+      border: 1px solid var(--border2);
+      padding: 36px 40px;
+      margin: 40px 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sim-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    }
+
+    .sim-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .sim-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 16px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text);
+    }
+
+    .sim-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      padding: 5px 12px;
+      background: rgba(108, 99, 255, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(108, 99, 255, 0.3);
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .sim-badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .sim-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      margin-bottom: 24px;
+    }
+
+    .sim-control {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .sim-control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .sim-control-value {
+      font-family: 'DM Mono', monospace;
+      color: var(--accent);
+      font-weight: 500;
+      font-size: 12px;
+    }
+
+    .sim-slider {
+      width: 100%;
+      -webkit-appearance: none;
+      appearance: none;
+      height: 4px;
+      background: var(--border2);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .sim-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      border: 3px solid var(--bg);
+      box-shadow: 0 0 0 1px var(--accent);
+      transition: transform 0.15s ease;
+    }
+
+    .sim-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    .sim-slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: 50%;
+      cursor: pointer;
+      border: 3px solid var(--bg);
+    }
+
+    .sim-button {
+      background: linear-gradient(135deg, var(--accent) 0%, #8276ff 100%);
+      color: #fff;
+      border: none;
+      padding: 14px 28px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sim-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s ease;
+    }
+
+    .sim-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(108, 99, 255, 0.35);
+    }
+
+    .sim-button:hover::before {
+      left: 100%;
+    }
+
+    .sim-button:active {
+      transform: translateY(0);
+    }
+
+    .sim-button:disabled {
+      background: var(--border2);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .sim-result-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      margin-top: 28px;
+    }
+
+    .sim-result-cell {
+      background: var(--surface2);
+      padding: 20px;
+      text-align: center;
+      transition: background 0.2s ease;
+    }
+
+    .sim-result-cell:hover {
+      background: var(--surface);
+    }
+
+    .sim-result-label {
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .sim-result-val {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 22px;
+      line-height: 1;
+      transition: color 0.3s ease;
+    }
+
+    /* REFERENCES SECTION */
+    .ref-list {
+      list-style: none;
+      counter-reset: ref-counter;
+      padding: 0;
+    }
+
+    .ref-list li {
+      counter-increment: ref-counter;
+      position: relative;
+      padding: 20px 0 20px 64px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      line-height: 1.75;
+      color: var(--text);
+      transition: padding-left 0.3s ease;
+    }
+
+    .ref-list li:hover {
+      padding-left: 72px;
+    }
+
+    .ref-list li::before {
+      content: "[" counter(ref-counter) "]";
+      position: absolute;
+      left: 0;
+      top: 20px;
+      font-family: 'DM Mono', monospace;
+      color: var(--accent);
+      font-weight: 500;
+      font-size: 13px;
+      background: rgba(108, 99, 255, 0.08);
+      padding: 4px 8px;
+      border: 1px solid rgba(108, 99, 255, 0.2);
+    }
+
+    .ref-list li .ref-authors {
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .ref-list li .ref-title {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .ref-list li .ref-source {
+      color: var(--muted);
+    }
+
+    .ref-list a {
+      color: var(--accent);
+      text-decoration: none;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      margin-left: 4px;
+    }
+
+    .ref-list a:hover {
+      text-decoration: underline;
+    }
+
+    .bibtex-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid rgba(108, 99, 255, 0.3);
+      padding: 10px 18px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      cursor: pointer;
+      margin-top: 24px;
+      transition: all 0.2s;
+    }
+
+    .bibtex-toggle:hover {
+      background: rgba(108, 99, 255, 0.08);
+    }
+
+    .bibtex-block {
+      display: none;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      padding: 24px;
+      margin-top: 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--text);
+      line-height: 1.7;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
+
+    .bibtex-block.open {
+      display: block;
+    }
+
+    /* ANIMATED COUNTER */
+    .stat-value.counter {
+      transition: none;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 1100px) {
+      .nav-links {
+        gap: 20px;
+      }
+      .nav-links a {
+        font-size: 10px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      nav {
+        padding: 0 20px;
+        height: 56px;
+      }
+
+      .nav-logo {
+        font-size: 11px;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      .hero {
+        padding: 80px 20px 60px;
+      }
+
+      section {
+        padding: 60px 20px;
+      }
+
+      .hero-stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .hero-title {
+        font-size: 44px;
+      }
+
+      .hypothesis-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .metrics-row {
+        grid-template-columns: 1fr;
+      }
+
+      .country-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .comparison-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .rec-reasons {
+        grid-template-columns: 1fr;
+      }
+
+      .bootstrap-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .team-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .sim-controls {
+        grid-template-columns: 1fr;
+      }
+
+      .sim-result-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .abstract-section {
+        padding: 40px 20px;
+      }
+
+      .abstract-box {
+        padding: 28px 24px;
+      }
+
+      .institution-banner {
+        flex-direction: column;
+        text-align: center;
+        gap: 16px;
+      }
+
+      .institution-info {
+        text-align: center;
+      }
+
+      footer {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+        padding: 32px 20px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- SCROLL PROGRESS BAR -->
+  <div class="scroll-progress" id="scrollProgress"></div>
+
+  <div class="grid-bg"></div>
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-logo-wrap">
+      <!-- Replace src with your actual logo file (e.g. logo.png) -->
+      <div class="nav-logo-img placeholder" id="navLogo">FU</div>
+      <div class="nav-logo">DAP391m · A/B Testing Report</div>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#abstract">Abstract</a></li>
+      <li><a href="#hypothesis">Hypothesis</a></li>
+      <li><a href="#results">Results</a></li>
+      <li><a href="#bootstrap">Bootstrap</a></li>
+      <li><a href="#country">Country</a></li>
+      <li><a href="#logistic">Logistic</a></li>
+      <li><a href="#recommendation">Verdict</a></li>
+      <li><a href="#team">Team</a></li>
+      <li><a href="#references">Refs</a></li>
+    </ul>
+    <div class="verdict-badge">Do Not Rollout</div>
+  </nav>
+
+  <main>
+
+    <!-- HERO -->
+    <div class="hero">
+      <div class="hero-glow"></div>
+      <div class="hero-glow-2"></div>
+      <div class="hero-label">DAP391m Project · E-Commerce Experiment Analysis · Dataset 2022</div>
+      <h1 class="hero-title">Checkout Page<br><em>A/B Test</em><br>Analysis</h1>
+      <p class="hero-sub">
+        End-to-end statistical evaluation of a redesigned checkout page across 288,541 users in 3 markets, using z-test,
+        bootstrap resampling, and logistic regression.
+      </p>
+
+      <div class="hero-stats">
+        <div class="stat-cell">
+          <div class="stat-label">Total Users</div>
+          <div class="stat-value neu counter" data-target="288541" data-suffix="" data-format="k">288K</div>
+          <div class="stat-note">144K per group</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Relative Uplift</div>
+          <div class="stat-value neg counter" data-target="-1.30" data-suffix="%" data-format="pct">-1.30%</div>
+          <div class="stat-note">new vs old page</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">P-Value</div>
+          <div class="stat-value warn counter" data-target="0.1953" data-suffix="" data-format="dec4">0.1953</div>
+          <div class="stat-note">α = 0.05 threshold</div>
+        </div>
+        <div class="stat-cell">
+          <div class="stat-label">Verdict</div>
+          <div class="stat-value neg" style="font-size:18px;">No Rollout</div>
+          <div class="stat-note">insufficient evidence</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABSTRACT (Academic format) -->
+    <section id="abstract" class="abstract-section" style="border-top: none;">
+      <div class="institution-banner">
+        <!-- Replace src with your school/department logo -->
+        <div class="institution-logo" id="institutionLogo">FU</div>
+        <div class="institution-info">
+          <div class="institution-name">FPT University — Department of Information Technology</div>
+          <div class="institution-sub">DAP391m · Data Analytics Project · Academic Year 2024–2025</div>
+        </div>
+      </div>
+
+      <div class="abstract-box">
+        <div class="abstract-label">Abstract</div>
+        <div class="abstract-text">
+          This study evaluates whether a redesigned e-commerce checkout page produces a measurable
+          improvement in conversion rate (CR) over the existing design. Using a publicly available
+          A/B testing dataset of 288,541 unique users distributed across three markets (US, UK, CA),
+          we apply a five-method analytical pipeline: data preprocessing with mismatch filtering and
+          deduplication, two-proportion z-test, non-parametric bootstrap resampling (10,000 iterations),
+          country-level segmentation under Bonferroni correction, and logistic regression with country
+          and time-bucket controls, including a heterogeneous treatment effect (HTE) interaction model.
+          The new page shows a relative decrease of −1.30% in conversion rate (Z = −1.2949, p = 0.1953).
+          The bootstrap 95% confidence interval [−3.24%, +0.71%] crosses zero, and all four logistic
+          models yield a treatment odds ratio between 0.980 and 0.985 (p > 0.14). Country-level analysis
+          reveals an asymmetric risk profile in Canada, where the 95% CI ranges from −14.29% to +3.11%
+          — a 4.6× downside asymmetry. We conclude there is insufficient statistical evidence to roll out
+          the new checkout page and recommend further iteration with explicit power analysis and a
+          Bayesian re-evaluation framework for future experiments.
+        </div>
+        <div class="abstract-keywords">
+          <strong>Keywords:</strong>
+          <span class="keyword-tag">A/B Testing</span>
+          <span class="keyword-tag">Conversion Rate</span>
+          <span class="keyword-tag">Hypothesis Testing</span>
+          <span class="keyword-tag">Bootstrap Resampling</span>
+          <span class="keyword-tag">Logistic Regression</span>
+          <span class="keyword-tag">E-commerce</span>
+          <span class="keyword-tag">Bonferroni Correction</span>
+          <span class="keyword-tag">Heterogeneous Treatment Effect</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- PIPELINE -->
+    <section style="padding: 60px 48px;">
+      <div class="section-tag">Analysis Pipeline</div>
+      <div class="pipeline">
+        <div class="pipeline-step done">
+          <div class="pipeline-icon">01</div>
+          <div class="pipeline-name">Data Preprocessing</div>
+          <div class="pipeline-status">✓ Complete</div>
+        </div>
+        <div class="pipeline-step done">
+          <div class="pipeline-icon">02</div>
+          <div class="pipeline-name">CR Analysis & Z-Test</div>
+          <div class="pipeline-status">✓ Complete</div>
+        </div>
+        <div class="pipeline-step done">
+          <div class="pipeline-icon">03</div>
+          <div class="pipeline-name">Bootstrap CI</div>
+          <div class="pipeline-status">✓ Complete</div>
+        </div>
+        <div class="pipeline-step done">
+          <div class="pipeline-icon">04</div>
+          <div class="pipeline-name">Country Segment</div>
+          <div class="pipeline-status">✓ Complete</div>
+        </div>
+        <div class="pipeline-step done">
+          <div class="pipeline-icon">05</div>
+          <div class="pipeline-name">Logistic Regression</div>
+          <div class="pipeline-status">✓ Complete</div>
+        </div>
+        <div class="pipeline-step todo">
+          <div class="pipeline-icon">06</div>
+          <div class="pipeline-name">Bayesian Testing</div>
+          <div class="pipeline-status">→ Next Step</div>
+        </div>
+        <div class="pipeline-step todo">
+          <div class="pipeline-icon">07</div>
+          <div class="pipeline-name">Final Report</div>
+          <div class="pipeline-status">→ Next Step</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HYPOTHESIS -->
+    <section id="hypothesis">
+      <div class="section-tag">01 — Research Design</div>
+      <h2 class="section-title">Hypothesis &amp;<br>Experimental Setup</h2>
+
+      <div class="hypothesis-grid">
+        <div class="hyp-card">
+          <div class="hyp-label">H₀ — Null Hypothesis</div>
+          <div class="hyp-formula">CR_new = CR_old</div>
+          <div class="hyp-desc">The redesigned checkout page produces no meaningful difference in conversion rate. Any
+            observed difference is attributable to random variation.</div>
+        </div>
+        <div class="hyp-card">
+          <div class="hyp-label">H₁ — Alternative Hypothesis</div>
+          <div class="hyp-formula">CR_new ≠ CR_old</div>
+          <div class="hyp-desc">The redesigned checkout page produces a statistically significant difference in
+            conversion rate — either positive or negative.</div>
+        </div>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Parameter</th>
+            <th>Value</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Test Type</td>
+            <td class="mono">Two-tailed</td>
+            <td>Detects both improvement and degradation</td>
+          </tr>
+          <tr>
+            <td>Significance Level (α)</td>
+            <td class="mono">0.05</td>
+            <td>5% false positive rate threshold</td>
+          </tr>
+          <tr>
+            <td>Control Group</td>
+            <td class="mono">old_page (group = control)</td>
+            <td>Existing checkout design</td>
+          </tr>
+          <tr>
+            <td>Treatment Group</td>
+            <td class="mono">new_page (group = treatment)</td>
+            <td>Redesigned checkout page</td>
+          </tr>
+          <tr>
+            <td>Outcome Variable</td>
+            <td class="mono">converted ∈ {0, 1}</td>
+            <td>Binary: 1 = purchased, 0 = did not purchase</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="insight-box">
+        <strong>Pre-processing integrity:</strong> After mismatch filtering (removing users assigned to the wrong page
+        variant) and deduplication, the treatment and control groups remained well-balanced: 144,226 control vs 144,315
+        treatment users. Country and time_bucket distributions were also nearly identical across groups, confirming
+        randomization integrity post-cleaning.
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="results">
+      <div class="section-tag">02 — Primary Results</div>
+      <h2 class="section-title">Conversion Rate<br>Analysis</h2>
+
+      <div class="metrics-row">
+        <div class="metric-card">
+          <div class="metric-name">Old Page CR (Control)</div>
+          <div class="metric-val" style="color: var(--pos);">12.03%</div>
+          <div class="metric-sub">17,349 conversions / 144,226 users</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name">New Page CR (Treatment)</div>
+          <div class="metric-val" style="color: var(--neg);">11.87%</div>
+          <div class="metric-sub">17,134 conversions / 144,315 users</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-name">Absolute Lift</div>
+          <div class="metric-val" style="color: var(--neg);">-0.156pp</div>
+          <div class="metric-sub">percentage points difference</div>
+        </div>
+      </div>
+
+      <!-- Interactive Charts (Chart.js) -->
+      <div class="bootstrap-layout" style="margin-bottom: 32px;">
+        <div class="bootstrap-chart">
+          <div class="chart-title">Conversion Rate Comparison with 95% CI</div>
+          <div class="chart-canvas-host" style="margin-top:8px;">
+            <canvas id="crCompareChart" role="img"
+              aria-label="Bar chart comparing conversion rates: old page 12.03%, new page 11.87%, with 95% CI error bars overlapping substantially">
+              CR comparison: old page 12.03%, new page 11.87%. CIs overlap.
+            </canvas>
+          </div>
+          <div style="margin-top:12px; font-size:12px; color:var(--muted); line-height:1.7;">
+            Comparison of conversion rates between old_page (12.03%) and new_page (11.87%) with 95% confidence interval error bars. The two CIs overlap substantially, indicating the difference is not statistically significant.
+          </div>
+        </div>
+        <div class="bootstrap-chart">
+          <div class="chart-title">Lift Waterfall: Old Page → New Page</div>
+          <div class="chart-canvas-host" style="margin-top:8px;">
+            <canvas id="waterfallChart" role="img"
+              aria-label="Waterfall chart showing old page CR 12.03% with a -0.156 percentage point drop to new page CR 11.87%">
+              Waterfall: 12.03% → -0.156pp → 11.87%.
+            </canvas>
+          </div>
+          <div style="margin-top:12px; font-size:12px; color:var(--muted); line-height:1.7;">
+            Waterfall chart showing the transition from Old Page CR (12.03%) to New Page CR (11.87%), with an absolute drop of -0.156 percentage points — a very small and statistically unreliable decline.
+          </div>
+        </div>
+      </div>
+
+      <div class="ztest-result">
+        <div class="ztest-cell">
+          <div class="ztest-label">Z-Statistic</div>
+          <div class="ztest-value" style="color: var(--warn);">-1.2949</div>
+        </div>
+        <div class="ztest-cell">
+          <div class="ztest-label">P-Value</div>
+          <div class="ztest-value" style="color: var(--neg);">0.1953</div>
+        </div>
+        <div class="ztest-cell">
+          <div class="ztest-label">Critical Value (α=0.05)</div>
+          <div class="ztest-value" style="color: var(--muted);">±1.96</div>
+        </div>
+      </div>
+
+      <div class="verdict-box">
+        <div class="verdict-text">
+          Since p-value (0.1953) &gt; α (0.05), we <strong>fail to reject the null hypothesis</strong>.
+          The observed -1.30% relative drop in conversion rate is not statistically significant —
+          it falls within the expected range of random variation under H₀.
+        </div>
+      </div>
+
+      <!-- INTERACTIVE Z-TEST CALCULATOR -->
+      <div class="sim-panel">
+        <div class="sim-header">
+          <div>
+            <div class="sim-title">Z-Test Calculator</div>
+            <div style="font-size:11px; color:var(--muted); margin-top:4px;">
+              Adjust the parameters to see how the z-statistic and p-value change
+            </div>
+          </div>
+          <span class="sim-badge">Interactive</span>
+        </div>
+
+        <div class="sim-controls">
+          <div class="sim-control">
+            <div class="sim-control-label">
+              <span>Control CR (Old page)</span>
+              <span class="sim-control-value"><span id="zCtrlVal">12.03</span>%</span>
+            </div>
+            <input type="range" class="sim-slider" id="zCtrl" min="5" max="20" step="0.01" value="12.03">
+          </div>
+          <div class="sim-control">
+            <div class="sim-control-label">
+              <span>Treatment CR (New page)</span>
+              <span class="sim-control-value"><span id="zTreatVal">11.87</span>%</span>
+            </div>
+            <input type="range" class="sim-slider" id="zTreat" min="5" max="20" step="0.01" value="11.87">
+          </div>
+          <div class="sim-control">
+            <div class="sim-control-label">
+              <span>Sample size per group</span>
+              <span class="sim-control-value" id="zNVal">144270</span>
+            </div>
+            <input type="range" class="sim-slider" id="zN" min="500" max="200000" step="500" value="144270">
+          </div>
+          <div class="sim-control">
+            <div class="sim-control-label">
+              <span>Significance level α</span>
+              <span class="sim-control-value" id="zAlphaVal">0.05</span>
+            </div>
+            <input type="range" class="sim-slider" id="zAlpha" min="0.01" max="0.10" step="0.01" value="0.05">
+          </div>
+        </div>
+
+        <div class="sim-result-grid">
+          <div class="sim-result-cell">
+            <div class="sim-result-label">Z-Statistic</div>
+            <div class="sim-result-val" id="zStatOut" style="color:var(--warn);">-1.295</div>
+          </div>
+          <div class="sim-result-cell">
+            <div class="sim-result-label">P-Value (two-tailed)</div>
+            <div class="sim-result-val" id="zPOut" style="color:var(--neg);">0.1953</div>
+          </div>
+          <div class="sim-result-cell">
+            <div class="sim-result-label">Critical Value</div>
+            <div class="sim-result-val" id="zCritOut" style="color:var(--muted);">±1.96</div>
+          </div>
+          <div class="sim-result-cell">
+            <div class="sim-result-label">Decision</div>
+            <div class="sim-result-val" id="zDecisionOut" style="color:var(--neg); font-size:16px;">FAIL</div>
+            <div id="zDecisionSub" style="font-size:10px; color:var(--muted); margin-top:6px; letter-spacing:0.05em;">to reject H₀</div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px; font-size:11px; color:var(--muted); line-height:1.7;">
+          Formula: $Z = \dfrac{\hat{p}_{new} - \hat{p}_{old}}{\sqrt{\hat{p}(1-\hat{p})\left(\frac{1}{n_1} + \frac{1}{n_2}\right)}}$
+          where $\hat{p}$ is the pooled proportion. The default values match the actual study (n = 144,270; CR_old = 12.03%; CR_new = 11.87%).
+        </div>
+      </div>
+    </section>
+
+    <!-- BOOTSTRAP -->
+    <section id="bootstrap">
+      <div class="section-tag">03 — Uncertainty Estimation</div>
+      <h2 class="section-title">Bootstrap<br>Confidence Interval</h2>
+
+      <div class="bootstrap-layout">
+        <div class="bootstrap-chart">
+          <div class="chart-title">Bootstrap Uplift Distribution (10,000 iterations)</div>
+          <div class="chart-canvas-host" style="margin-top:8px;">
+            <canvas id="bootstrapHistChart" role="img"
+              aria-label="Histogram of 10,000 bootstrap uplift samples centered around -1.29% with 95% confidence interval from -3.24% to +0.71%">
+              Bootstrap histogram: mean -1.29%, 95% CI [-3.24%, +0.71%].
+            </canvas>
+          </div>
+          <div style="margin-top: 16px; font-size: 12px; color: var(--muted);">
+            Distribution centered around -1.29%, 95% CI crosses zero confirming non-significance.
+          </div>
+        </div>
+
+        <div class="bootstrap-chart">
+          <div class="chart-title">95% Confidence Interval Summary</div>
+          <div style="margin-bottom: 32px;">
+            <div style="font-size:11px; color:var(--muted); margin-bottom:8px;">Mean bootstrap uplift</div>
+            <div style="font-family:'Syne',sans-serif; font-size:32px; font-weight:800; color:var(--neg);">-1.29%</div>
+          </div>
+
+          <div class="ci-visual">
+            <div class="ci-line"></div>
+            <div class="ci-range"></div>
+            <div class="ci-zero"></div>
+            <div class="ci-mean"></div>
+          </div>
+          <div class="ci-labels">
+            <span style="color:var(--neg);">-3.24%</span>
+            <span>CI Lower</span>
+            <span style="color:var(--muted);">0%</span>
+            <span>CI Upper</span>
+            <span style="color:var(--pos);">+0.71%</span>
+          </div>
+
+          <div
+            style="margin-top: 28px; padding: 16px; background: rgba(108,99,255,0.06); border: 1px solid rgba(108,99,255,0.15); font-size:12px; line-height:1.7; color:var(--muted);">
+            The 95% CI <span style="color:var(--text);">[-3.24%, +0.71%]</span> crosses zero, indicating the negative
+            uplift is not statistically robust. Consistent with z-test conclusion.
+          </div>
+        </div>
+      </div>
+
+      <!-- INTERACTIVE BOOTSTRAP SIMULATOR -->
+      <div class="sim-panel">
+        <div class="sim-header">
+          <div>
+            <div class="sim-title">Bootstrap Simulator</div>
+            <div style="font-size:11px; color:var(--muted); margin-top:4px;">
+              Run real bootstrap resampling live in your browser
+            </div>
+          </div>
+          <span class="sim-badge">Interactive</span>
+        </div>
+
+        <div class="sim-controls">
+          <div class="sim-control">
+            <div class="sim-control-label">
+              <span>Iterations</span>
+              <span class="sim-control-value" id="bsIterVal">10000</span>
+            </div>
+            <input type="range" class="sim-slider" id="bsIter" min="500" max="20000" step="500" value="10000">
+          </div>
+          <div class="sim-control">
+            <div class="sim-control-label">
+              <span>Sample size (per group)</span>
+              <span class="sim-control-value" id="bsSizeVal">144270</span>
+            </div>
+            <input type="range" class="sim-slider" id="bsSize" min="5000" max="144270" step="1000" value="144270">
+          </div>
+        </div>
+
+        <button class="sim-button" id="bsRunBtn">▶ Run Bootstrap Simulation</button>
+
+        <div class="chart-canvas-host short" style="margin-top:24px;">
+          <canvas id="bootstrapLiveChart" role="img"
+            aria-label="Live bootstrap simulation histogram updates after running."></canvas>
+        </div>
+
+        <div class="sim-result-grid">
+          <div class="sim-result-cell">
+            <div class="sim-result-label">Mean Uplift</div>
+            <div class="sim-result-val" id="bsMean" style="color:var(--muted);">—</div>
+          </div>
+          <div class="sim-result-cell">
+            <div class="sim-result-label">95% CI Lower</div>
+            <div class="sim-result-val" id="bsLow" style="color:var(--muted);">—</div>
+          </div>
+          <div class="sim-result-cell">
+            <div class="sim-result-label">95% CI Upper</div>
+            <div class="sim-result-val" id="bsHigh" style="color:var(--muted);">—</div>
+          </div>
+          <div class="sim-result-cell">
+            <div class="sim-result-label">Contains 0?</div>
+            <div class="sim-result-val" id="bsContainsZero" style="color:var(--muted);">—</div>
+            <div id="bsContainsZeroSub" style="font-size:10px; color:var(--muted); margin-top:6px; letter-spacing:0.05em;">Run to see</div>
+          </div>
+        </div>
+
+        <div style="margin-top:16px; font-size:11px; color:var(--muted); line-height:1.7;">
+          The simulator generates uplift samples from $\text{Normal}(\mu = -1.29\%, \sigma \approx 1.0\%)$ —
+          an approximation of the empirical bootstrap distribution observed in the original study —
+          and computes the 95% percentile CI on the resampled means. Use this to gain intuition for how
+          sample size and iteration count affect CI width and stability.
+        </div>
+      </div>
+
+      <div class="insight-box">
+        <strong>Bootstrap Insight:</strong> The mean bootstrap uplift is negative (-1.29%), suggesting that the new page
+        tends to underperform in repeated resampling. However, because the 95% confidence interval crosses zero, the
+        observed negative effect is not statistically reliable. This result triangulates and reinforces the
+        two-proportion z-test: there is insufficient evidence to conclude the new page performs differently from the old
+        page.
+      </div>
+    </section>
+
+    <!-- COUNTRY -->
+    <section id="country">
+      <div class="section-tag">04 — Market Segmentation</div>
+      <h2 class="section-title">Country-Level<br>Analysis</h2>
+
+      <!-- Country Charts (Live Chart.js) -->
+      <div style="margin-bottom: 48px;">
+        <div class="bootstrap-layout">
+          <div class="bootstrap-chart">
+            <div class="chart-title">Conversion Rate by Country & Landing Page</div>
+            <div class="chart-canvas-host" style="margin-top:8px;">
+              <canvas id="countryCrChart" role="img"
+                aria-label="Grouped bar chart of conversion rates by country and landing page version">
+                Country CR: UK old 11.99% new 12.11%, US old 12.06% new 11.85%, CA old 11.88% new 11.18%.
+              </canvas>
+            </div>
+            <div style="margin-top:12px; font-size:12px; color:var(--muted); line-height:1.7;">
+              CR comparison by country: UK shows new_page CR (12.11%) slightly higher than old_page (11.99%), while CA and US both have lower new_page CR. The differences are marginal across all markets.
+            </div>
+          </div>
+          <div class="bootstrap-chart">
+            <div class="chart-title">Relative Uplift by Country</div>
+            <div class="chart-canvas-host" style="margin-top:8px;">
+              <canvas id="countryUpliftChart" role="img"
+                aria-label="Bar chart of relative uplift by country: UK +0.92%, US -1.76%, CA -5.92%">
+                Relative uplift: UK +0.92%, US -1.76%, CA -5.92%.
+              </canvas>
+            </div>
+            <div style="margin-top:12px; font-size:12px; color:var(--muted); line-height:1.7;">
+              UK is the only market with a positive uplift (+0.92%). US shows a modest decline (-1.76%), while CA exhibits the largest drop (-5.92%) — a notable signal from a product risk management perspective.
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:16px; display:flex; justify-content:center;">
+          <div class="bootstrap-chart" style="max-width:60%;">
+            <div class="chart-title">Country-Level Bootstrap 95% Confidence Interval — Forest Plot</div>
+            <div class="chart-canvas-host" style="margin-top:8px; height:280px;">
+              <canvas id="forestPlotChart" role="img"
+                aria-label="Forest plot of 95% bootstrap confidence intervals for relative uplift in UK, US, CA and Overall. All intervals cross zero.">
+                Forest plot: UK [-3.00, +4.95], US [-4.09, +0.62], CA [-14.29, +3.11], Overall [-3.24, +0.71].
+              </canvas>
+            </div>
+            <div style="margin-top:12px; font-size:12px; color:var(--muted); line-height:1.7;">
+              All three countries' Bootstrap 95% CIs contain zero, confirming no statistically significant treatment effect in any market. CA has the widest CI [-14.29%, +3.11%] due to its small sample size (~5% of total users).
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="country-grid">
+        <!-- UK -->
+        <div class="country-card">
+          <div class="country-flag" style="color: #43e8a0;">UK</div>
+          <div class="country-name">United Kingdom</div>
+          <div class="country-uplift" style="color: var(--pos);">+0.92%</div>
+          <span class="risk-badge risk-low">Low Risk</span>
+          <div style="margin-top: 20px;">
+            <div class="country-stat">
+              <span class="country-stat-label">Old Page CR</span>
+              <span>12.00%</span>
+            </div>
+            <div class="country-stat">
+              <span class="country-stat-label">New Page CR</span>
+              <span>12.11%</span>
+            </div>
+            <div class="country-stat">
+              <span class="country-stat-label">P-Value</span>
+              <span class="tag tag-ns">n.s.</span>
+            </div>
+            <div class="country-stat">
+              <span class="country-stat-label">Bootstrap CI</span>
+              <span style="font-size:11px;">crosses zero</span>
+            </div>
+          </div>
+          <div style="margin-top:16px; font-size:11px; color:var(--muted); line-height:1.6;">
+            Only market with positive descriptive uplift. Not statistically significant, but lowest downside risk.
+          </div>
+        </div>
+
+        <!-- US -->
+        <div class="country-card" style="border-left: 2px solid var(--warn);">
+          <div class="country-flag" style="color: #ffb347;">US</div>
+          <div class="country-name">United States</div>
+          <div class="country-uplift" style="color: var(--warn);">-1.76%</div>
+          <span class="risk-badge risk-med">Medium Risk</span>
+          <div style="margin-top: 20px;">
+            <div class="country-stat">
+              <span class="country-stat-label">Old Page CR</span>
+              <span>12.06%</span>
+            </div>
+            <div class="country-stat">
+              <span class="country-stat-label">New Page CR</span>
+              <span>11.85%</span>
+            </div>
+            <div class="country-stat">
+              <span class="country-stat-label">P-Value</span>
+              <span class="tag tag-ns">n.s.</span>
+            </div>
+            <div class="country-stat">
+              <span class="country-stat-label">Sample Share</span>
+              <span>~70% of total</span>
+            </div>
+          </div>
+          <div style="margin-top:16px; font-size:11px; color:var(--muted); line-height:1.6;">
+            Largest market (~70% of users). Negative uplift here dominates the overall result significantly.
+          </div>
+        </div>
+
+        <!-- CA -->
+        <div class="country-card" style="border-left: 2px solid var(--neg);">
+          <div class="country-flag" style="color: #ff4d6d;">CA</div>
+          <div class="country-name">Canada</div>
+          <div class="country-uplift" style="color: var(--neg);">-5.92%</div>
+          <span class="risk-badge risk-high">High Risk</span>
+          <div style="margin-top: 20px;">
+            <div class="country-stat">
+              <span class="country-stat-label">Old Page CR</span>
+              <span>11.88%</span>
+            </div>
+            <div class="country-stat">
+              <span class="country-stat-label">New Page CR</span>
+              <span>11.18%</span>
+            </div>
+            <div class="country-stat">
+              <span class="country-stat-label">Bootstrap CI</span>
+              <span style="font-size:11px; color:var(--neg);">[-14.29%, +3.11%]</span>
+            </div>
+            <div class="country-stat">
+              <span class="country-stat-label">Asymmetry Ratio</span>
+              <span style="color:var(--neg);">4.6× downside</span>
+            </div>
+          </div>
+          <div style="margin-top:16px; font-size:11px; color:var(--muted); line-height:1.6;">
+            Worst-case: -14.29% loss. Best-case: +3.11% gain. Risk profile strongly asymmetric.
+          </div>
+        </div>
+      </div>
+
+      <!-- CA Risk Detail -->
+      <div class="ca-risk-box">
+        <div class="section-tag" style="margin-bottom:16px;">🇨🇦 Canada — Asymmetric Risk Detail</div>
+        <div
+          style="font-family:'Fraunces',serif; font-size:22px; font-weight:300; font-style:italic; margin-bottom:16px; line-height:1.5;">
+          The possible upside is <span style="color:var(--pos);">+3.11%</span>, while the downside is <span
+            style="color:var(--neg);">-14.29%</span> — a 4.6× asymmetry that represents a serious product risk.
+        </div>
+        <div class="risk-meter">
+          <div class="risk-meter-neg"></div>
+          <div class="risk-meter-pos"></div>
+          <span class="risk-meter-label left">Downside: -14.29%</span>
+          <span class="risk-meter-label right">+3.11%</span>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:24px; margin-top:24px;">
+          <div>
+            <div
+              style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:8px;">
+              Original Uplift</div>
+            <div style="font-family:'Syne',sans-serif; font-size:24px; font-weight:800; color:var(--neg);">-5.92%</div>
+          </div>
+          <div>
+            <div
+              style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:8px;">
+              Mean Bootstrap Uplift</div>
+            <div style="font-family:'Syne',sans-serif; font-size:24px; font-weight:800; color:var(--neg);">-5.82%</div>
+          </div>
+          <div>
+            <div
+              style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.12em; margin-bottom:8px;">
+              95% Bootstrap CI</div>
+            <div style="font-family:'Syne',sans-serif; font-size:18px; font-weight:800; color:var(--neg);">[-14.29%,
+              +3.11%]</div>
+          </div>
+        </div>
+        <div style="margin-top:20px; font-size:12px; color:var(--muted); line-height:1.8;">
+          Although the CI contains zero and the result is not statistically significant under α=0.05,
+          the risk profile is too asymmetric to ignore from a product risk management perspective.
+          The potential downside in CA alone justifies caution about full rollout.
+        </div>
+      </div>
+
+      <div class="insight-box">
+        <strong>Multiple Comparisons Note:</strong> Three separate z-tests were conducted across CA, UK, and US. Under
+        Bonferroni correction, the adjusted significance threshold is α = 0.05/3 = 0.0167. None of the country-level
+        p-values approach this corrected threshold. The conclusion of no significant country-level effect remains robust
+        even under multiple testing adjustment.
+      </div>
+    </section>
+
+    <!-- LOGISTIC REGRESSION -->
+    <section id="logistic">
+      <div class="section-tag">05 — Regression Modeling</div>
+      <h2 class="section-title">Logistic Regression<br>Analysis</h2>
+
+      <div class="insight-box" style="margin-bottom: 32px;">
+        <strong>Modeling objective:</strong> Unlike the z-test (which tests significance only), logistic regression
+        provides <em>effect size estimates with confidence intervals</em> (odds ratios), controls for confounders, and
+        tests for heterogeneous treatment effects across country segments. These are complementary — not redundant —
+        findings.
+      </div>
+
+      <!-- Balance Check -->
+      <div style="margin-bottom: 48px;">
+        <div
+          style="font-family:'Syne',sans-serif; font-weight:700; font-size:14px; margin-bottom:20px; letter-spacing:0.05em;">
+          Pre-Modeling Balance Check</div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Covariate</th>
+              <th>Control Distribution</th>
+              <th>Treatment Distribution</th>
+              <th>Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Sample Size</td>
+              <td class="mono">144,226</td>
+              <td class="mono">144,315</td>
+              <td><span class="tag" style="background:rgba(67,232,160,0.12);color:var(--pos);">✓ Balanced</span></td>
+            </tr>
+            <tr>
+              <td>CA proportion</td>
+              <td class="mono">4.949%</td>
+              <td class="mono">5.028%</td>
+              <td><span class="tag" style="background:rgba(67,232,160,0.12);color:var(--pos);">✓ Balanced</span></td>
+            </tr>
+            <tr>
+              <td>UK proportion</td>
+              <td class="mono">25.030%</td>
+              <td class="mono">24.849%</td>
+              <td><span class="tag" style="background:rgba(67,232,160,0.12);color:var(--pos);">✓ Balanced</span></td>
+            </tr>
+            <tr>
+              <td>US proportion</td>
+              <td class="mono">70.021%</td>
+              <td class="mono">70.123%</td>
+              <td><span class="tag" style="background:rgba(67,232,160,0.12);color:var(--pos);">✓ Balanced</span></td>
+            </tr>
+            <tr>
+              <td>0-15 min bucket</td>
+              <td class="mono">24.773%</td>
+              <td class="mono">24.943%</td>
+              <td><span class="tag" style="background:rgba(67,232,160,0.12);color:var(--pos);">✓ Balanced</span></td>
+            </tr>
+            <tr>
+              <td>15-30 min bucket</td>
+              <td class="mono">25.136%</td>
+              <td class="mono">24.954%</td>
+              <td><span class="tag" style="background:rgba(67,232,160,0.12);color:var(--pos);">✓ Balanced</span></td>
+            </tr>
+            <tr>
+              <td>30-45 min bucket</td>
+              <td class="mono">24.997%</td>
+              <td class="mono">25.098%</td>
+              <td><span class="tag" style="background:rgba(67,232,160,0.12);color:var(--pos);">✓ Balanced</span></td>
+            </tr>
+            <tr>
+              <td>45-60 min bucket</td>
+              <td class="mono">25.095%</td>
+              <td class="mono">25.006%</td>
+              <td><span class="tag" style="background:rgba(67,232,160,0.12);color:var(--pos);">✓ Balanced</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Model Tabs -->
+      <div class="model-tabs">
+        <button class="model-tab active" onclick="switchModel('m1', this)">Model 1<br><span
+            style="font-size:9px;opacity:0.7;">treat only</span></button>
+        <button class="model-tab" onclick="switchModel('m2', this)">Model 2<br><span
+            style="font-size:9px;opacity:0.7;">+ country</span></button>
+        <button class="model-tab" onclick="switchModel('m2b', this)">Model 2b<br><span
+            style="font-size:9px;opacity:0.7;">+ time_bucket</span></button>
+        <button class="model-tab" onclick="switchModel('m3', this)">Model 3 HTE<br><span
+            style="font-size:9px;opacity:0.7;">interaction</span></button>
+      </div>
+
+      <!-- Model 1 -->
+      <div id="m1" class="model-content active">
+        <div style="margin-bottom:16px; font-size:12px; color:var(--muted);">
+          Formula: <span style="color:var(--accent); font-family:'DM Mono',monospace;">converted ~ treat</span>
+          &nbsp;|&nbsp; Baseline model — equivalent to two-proportion z-test
+        </div>
+        <table class="odds-table">
+          <thead>
+            <tr>
+              <th>Term</th>
+              <th>Coefficient</th>
+              <th>Odds Ratio</th>
+              <th>95% CI</th>
+              <th>P-Value</th>
+              <th>Significance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Intercept</td>
+              <td>-1.9897</td>
+              <td>0.1367</td>
+              <td>[0.135, 0.139]</td>
+              <td>&lt; 0.001</td>
+              <td><span class="tag tag-sig">***</span></td>
+            </tr>
+            <tr>
+              <td><strong>treat</strong></td>
+              <td style="color:var(--neg);">-0.0149</td>
+              <td style="color:var(--neg);">0.9852</td>
+              <td>[-0.037, +0.008]</td>
+              <td style="color:var(--warn);">0.195</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="insight-box">
+          Treatment OR = 0.985: the new page is associated with ~1.5% lower conversion odds. P-value 0.195 &gt; 0.05.
+          Consistent with z-test. This model serves as the baseline reference only.
+        </div>
+      </div>
+
+      <!-- Model 2 -->
+      <div id="m2" class="model-content">
+        <div style="margin-bottom:16px; font-size:12px; color:var(--muted);">
+          Formula: <span style="color:var(--accent); font-family:'DM Mono',monospace;">converted ~ treat +
+            C(country)</span> &nbsp;|&nbsp; Core model — controls for country baseline differences
+        </div>
+        <table class="odds-table">
+          <thead>
+            <tr>
+              <th>Term</th>
+              <th>Coefficient</th>
+              <th>Odds Ratio</th>
+              <th>P-Value</th>
+              <th>Significance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Intercept</td>
+              <td>-2.0307</td>
+              <td>0.1312</td>
+              <td>&lt; 0.001</td>
+              <td><span class="tag tag-sig">***</span></td>
+            </tr>
+            <tr>
+              <td><strong>treat</strong></td>
+              <td style="color:var(--neg);">-0.0148</td>
+              <td style="color:var(--neg);">0.9853</td>
+              <td style="color:var(--warn);">0.197</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+            <tr>
+              <td>C(country)[T.UK]</td>
+              <td style="color:var(--pos);">+0.0503</td>
+              <td style="color:var(--pos);">1.0516</td>
+              <td>0.078</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+            <tr>
+              <td>C(country)[T.US]</td>
+              <td style="color:var(--pos);">+0.0405</td>
+              <td style="color:var(--pos);">1.0414</td>
+              <td>0.133</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="insight-box">
+          After controlling for country, <strong>treat OR remains 0.985, p = 0.197</strong>. Country adjustment does not
+          change the treatment conclusion. Reference category = CA (alphabetical default). UK and US show higher
+          baseline conversion odds than CA, but neither is significant at α = 0.05.
+        </div>
+      </div>
+
+      <!-- Model 2b -->
+      <div id="m2b" class="model-content">
+        <div style="margin-bottom:16px; font-size:12px; color:var(--muted);">
+          Formula: <span style="color:var(--accent); font-family:'DM Mono',monospace;">converted ~ treat + C(country) +
+            C(time_bucket)</span> &nbsp;|&nbsp; Robustness check — adds time dimension
+        </div>
+        <table class="odds-table">
+          <thead>
+            <tr>
+              <th>Term</th>
+              <th>Coefficient</th>
+              <th>Odds Ratio</th>
+              <th>P-Value</th>
+              <th>Significance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>treat</strong></td>
+              <td style="color:var(--neg);">-0.0149</td>
+              <td style="color:var(--neg);">0.9852</td>
+              <td style="color:var(--warn);">0.195</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+            <tr>
+              <td>C(country)[T.UK]</td>
+              <td>+0.0504</td>
+              <td>1.0516</td>
+              <td>0.077</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+            <tr>
+              <td>C(country)[T.US]</td>
+              <td>+0.0406</td>
+              <td>1.0414</td>
+              <td>0.133</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+            <tr>
+              <td>C(time_bucket)[T.15-30_min]</td>
+              <td style="color:var(--neg);">-0.0220</td>
+              <td>0.9782</td>
+              <td>0.175</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+            <tr>
+              <td>C(time_bucket)[T.30-45_min]</td>
+              <td>+0.0047</td>
+              <td>1.0047</td>
+              <td>0.771</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+            <tr>
+              <td>C(time_bucket)[T.45-60_min]</td>
+              <td style="color:var(--neg);">-0.0227</td>
+              <td>0.9776</td>
+              <td>0.163</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="insight-box">
+          Adding time_bucket does not materially change the treatment coefficient (OR = 0.9852, p = 0.195). No time
+          bucket shows a significant effect on conversion. <strong>The treatment conclusion is robust to time-related
+            adjustment.</strong> This validates the timestamp feature engineering and confirms no
+          novelty/time-of-session effect.
+        </div>
+      </div>
+
+      <!-- Model 3 HTE -->
+      <div id="m3" class="model-content">
+        <div style="margin-bottom:16px; font-size:12px; color:var(--muted);">
+          Formula: <span style="color:var(--accent); font-family:'DM Mono',monospace;">converted ~ treat * C(country,
+            Treatment(reference='US'))</span> &nbsp;|&nbsp; HTE model — US as reference
+        </div>
+        <table class="odds-table">
+          <thead>
+            <tr>
+              <th>Term</th>
+              <th>Coefficient</th>
+              <th>Odds Ratio</th>
+              <th>P-Value</th>
+              <th>Significance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>treat</strong> (effect at US)</td>
+              <td style="color:var(--neg);">-0.0201</td>
+              <td style="color:var(--neg);">0.9801</td>
+              <td>0.142</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+            <tr>
+              <td>C(country)[T.CA]</td>
+              <td>-0.0163</td>
+              <td>0.9838</td>
+              <td>0.666</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+            <tr>
+              <td>C(country)[T.UK]</td>
+              <td>-0.0054</td>
+              <td>0.9946</td>
+              <td>0.773</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+            <tr>
+              <td><strong>treat × CA</strong></td>
+              <td style="color:var(--neg);">-0.0488</td>
+              <td style="color:var(--neg);">0.9523</td>
+              <td>0.366</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+            <tr>
+              <td><strong>treat × UK</strong></td>
+              <td style="color:var(--pos);">+0.0306</td>
+              <td style="color:var(--pos);">1.0310</td>
+              <td>0.252</td>
+              <td><span class="tag tag-ns">n.s.</span></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="insight-box">
+          <strong>Heterogeneous Treatment Effect (HTE) conclusion:</strong> No reliable evidence that the treatment
+          effect differs across countries. The treat × CA interaction suggests CA performs worse under treatment
+          relative to US (OR = 0.952), and UK performs slightly better (OR = 1.031), but neither interaction term is
+          statistically significant. The treatment effect appears uniform across markets.
+        </div>
+      </div>
+
+      <!-- Model Comparison -->
+      <div style="margin-top: 48px;">
+        <div
+          style="font-family:'Syne',sans-serif; font-weight:700; font-size:14px; margin-bottom:20px; letter-spacing:0.05em;">
+          Model Comparison — treat Odds Ratio Across All Models</div>
+        <div class="comparison-grid">
+          <div class="comp-cell comp-header">
+            <div class="comp-model">Model 1</div>
+            <div class="comp-formula">converted ~ treat</div>
+          </div>
+          <div class="comp-cell comp-header">
+            <div class="comp-model">Model 2</div>
+            <div class="comp-formula">+ C(country)</div>
+          </div>
+          <div class="comp-cell comp-header">
+            <div class="comp-model">Model 2b</div>
+            <div class="comp-formula">+ C(country) + C(time_bucket)</div>
+          </div>
+          <div class="comp-cell comp-header">
+            <div class="comp-model">Model 3 HTE</div>
+            <div class="comp-formula">treat × C(country)</div>
+          </div>
+
+          <div class="comp-cell">
+            <div class="comp-metric" style="color:var(--neg);">0.9852</div>
+            <div class="comp-label">treat OR</div>
+          </div>
+          <div class="comp-cell">
+            <div class="comp-metric" style="color:var(--neg);">0.9853</div>
+            <div class="comp-label">treat OR</div>
+          </div>
+          <div class="comp-cell">
+            <div class="comp-metric" style="color:var(--neg);">0.9852</div>
+            <div class="comp-label">treat OR</div>
+          </div>
+          <div class="comp-cell">
+            <div class="comp-metric" style="color:var(--neg);">0.9801</div>
+            <div class="comp-label">treat OR at US</div>
+          </div>
+
+          <div class="comp-cell">
+            <div class="comp-metric" style="color:var(--warn); font-size:18px;">p = 0.195</div>
+            <div class="comp-label">p-value</div>
+          </div>
+          <div class="comp-cell">
+            <div class="comp-metric" style="color:var(--warn); font-size:18px;">p = 0.197</div>
+            <div class="comp-label">p-value</div>
+          </div>
+          <div class="comp-cell">
+            <div class="comp-metric" style="color:var(--warn); font-size:18px;">p = 0.195</div>
+            <div class="comp-label">p-value</div>
+          </div>
+          <div class="comp-cell">
+            <div class="comp-metric" style="color:var(--warn); font-size:18px;">p = 0.142</div>
+            <div class="comp-label">p-value</div>
+          </div>
+        </div>
+        <div class="insight-box">
+          <strong>Key finding:</strong> The treatment odds ratio is remarkably stable across all four models
+          (0.980–0.985). Adding country, time_bucket, or interaction terms does not meaningfully change the treatment
+          estimate. This <em>coefficient stability</em> is strong evidence that the result is not confounded by country
+          or time effects — the conclusion is robust.
+        </div>
+      </div>
+    </section>
+
+    <!-- RECOMMENDATION -->
+    <section id="recommendation" style="padding: 0;">
+      <div class="rec-section">
+        <div class="section-tag" style="justify-content:center;">06 — Final Verdict</div>
+        <div class="rec-title">
+          <em class="highlight">Do Not</em> Roll Out<br>the New Page
+        </div>
+        <div style="font-size:15px; color:var(--muted); max-width:560px; margin:0 auto; line-height:1.8;">
+          Across five independent analytical methods, the evidence consistently points to the same conclusion: the new
+          checkout page does not demonstrate statistically reliable improvement.
+        </div>
+
+        <div class="rec-reasons">
+          <div class="rec-reason">
+            <div class="rec-reason-num">01</div>
+            <div class="rec-reason-text">Z-test p-value = 0.1953. The observed -1.30% relative drop is within the
+              expected range of random variation. No statistical significance.</div>
+          </div>
+          <div class="rec-reason">
+            <div class="rec-reason-num">02</div>
+            <div class="rec-reason-text">Bootstrap 95% CI = [-3.24%, +0.71%] crosses zero. Negative mean uplift is not
+              statistically robust across 10,000 resampling iterations.</div>
+          </div>
+          <div class="rec-reason">
+            <div class="rec-reason-num">03</div>
+            <div class="rec-reason-text">Canada market shows -5.92% uplift with asymmetric downside risk [-14.29%,
+              +3.11%]. The potential loss is 4.6× the potential gain.</div>
+          </div>
+          <div class="rec-reason">
+            <div class="rec-reason-num">04</div>
+            <div class="rec-reason-text">Logistic regression confirms treatment OR &lt; 1 across all 4 models (basic,
+              country-adjusted, time-adjusted, interaction), all non-significant.</div>
+          </div>
+        </div>
+
+        <div
+          style="background: rgba(255,77,109,0.06); border: 1px solid rgba(255,77,109,0.2); padding: 32px 40px; max-width: 640px; margin: 0 auto; text-align: left;">
+          <div
+            style="font-size:10px; letter-spacing:0.2em; text-transform:uppercase; color:var(--neg); margin-bottom:16px; font-family:'Syne',sans-serif; font-weight:700;">
+            Recommended Actions</div>
+          <div style="font-size:13px; color:var(--muted); line-height:2;">
+            → Return the redesign to iteration<br>
+            → Investigate CA market specifically before any regional rollout<br>
+            → Define MDE and conduct power analysis before next test<br>
+            → Consider Bayesian A/B framework for future experiments<br>
+            → Run targeted tests per market with adequate sample sizes
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- LIMITATIONS -->
+    <section id="limitations">
+      <div class="section-tag">07 — Limitations & Future Work</div>
+      <h2 class="section-title">Study<br>Limitations</h2>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border); border:1px solid var(--border); margin-bottom:32px;">
+        <div style="background:var(--surface); padding:32px;">
+          <div style="font-family:'Syne',sans-serif; font-weight:700; font-size:13px; color:var(--warn); margin-bottom:12px; letter-spacing:0.05em;">Missing Business Metrics</div>
+          <div style="font-size:13px; color:var(--muted); line-height:1.7;">Revenue per user and Average Order Value (AOV) were not available. A page could convert fewer users but at higher value — this study captures only the binary conversion signal.</div>
+        </div>
+        <div style="background:var(--surface); padding:32px;">
+          <div style="font-family:'Syne',sans-serif; font-weight:700; font-size:13px; color:var(--warn); margin-bottom:12px; letter-spacing:0.05em;">No Device / Traffic Source Data</div>
+          <div style="font-size:13px; color:var(--muted); line-height:1.7;">Missing mobile vs. desktop splits and traffic source attribution. Simpson's Paradox could mask device-specific treatment effects that segment-level analysis would reveal.</div>
+        </div>
+        <div style="background:var(--surface); padding:32px;">
+          <div style="font-family:'Syne',sans-serif; font-weight:700; font-size:13px; color:var(--warn); margin-bottom:12px; letter-spacing:0.05em;">Timestamp Limitations</div>
+          <div style="font-size:13px; color:var(--muted); line-height:1.7;">The original timestamp format lacks calendar dates, preventing time-series analysis for novelty effects or day-of-week seasonality. Only elapsed session time was recoverable.</div>
+        </div>
+        <div style="background:var(--surface); padding:32px;">
+          <div style="font-family:'Syne',sans-serif; font-weight:700; font-size:13px; color:var(--accent3); margin-bottom:12px; letter-spacing:0.05em;">Future Work</div>
+          <div style="font-size:13px; color:var(--muted); line-height:1.7;">Recommended next steps: Bayesian A/B testing framework for posterior probability analysis, sequential testing for early stopping, and multivariate testing on specific UI components.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TEAM -->
+    <section id="team">
+      <div class="section-tag">08 — Research Team</div>
+      <h2 class="section-title">Team<br>Members</h2>
+
+      <div class="team-grid">
+        <div class="team-card">
+          <div class="team-avatar" style="background: linear-gradient(135deg, #6c63ff 0%, #43e8a0 100%);">ĐG</div>
+          <div class="team-name">Nguyễn Lương Hải Đăng</div>
+          <div class="team-role">Lead Analyst & Engineer</div>
+          <div class="team-contrib">
+            End-to-end data pipeline, statistical testing (Z-test, Bootstrap), logistic regression modeling, web report development, and project coordination.
+          </div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar" style="background: linear-gradient(135deg, #ff6b6b 0%, #ffb347 100%);">TN</div>
+          <div class="team-name">Nguyễn Thị Thanh Tiên</div>
+          <div class="team-role">Data Analyst & QA</div>
+          <div class="team-contrib">
+            Data preprocessing, mismatch filtering, deduplication validation, exploratory data analysis, country segmentation analysis, and quality assurance.
+          </div>
+        </div>
+        <div class="team-card">
+          <div class="team-avatar" style="background: linear-gradient(135deg, #43e8a0 0%, #6c63ff 100%);">HU</div>
+          <div class="team-name">Dương Quốc Hữu</div>
+          <div class="team-role">Statistical Modeler</div>
+          <div class="team-contrib">
+            Bootstrap simulation design, confidence interval computation, interaction model (HTE), VIF multicollinearity analysis, and Bonferroni correction implementation.
+          </div>
+        </div>
+      </div>
+
+      <div class="institution-banner">
+        <div class="institution-logo" id="teamLogo">FU</div>
+        <div class="institution-info">
+          <div class="institution-name">FPT University</div>
+          <div class="institution-sub">DAP391m · Data Analytics Project · Semester Spring 2025</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- REFERENCES -->
+    <section id="references">
+      <div class="section-tag">09 — References</div>
+      <h2 class="section-title">References &amp;<br>Citations</h2>
+
+      <ol class="ref-list">
+        <li>
+          <span class="ref-authors">Kohavi, R., Tang, D., & Xu, Y.</span> (2020).
+          <span class="ref-title">Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing.</span>
+          <span class="ref-source">Cambridge University Press.</span>
+        </li>
+        <li>
+          <span class="ref-authors">Efron, B. & Tibshirani, R. J.</span> (1994).
+          <span class="ref-title">An Introduction to the Bootstrap.</span>
+          <span class="ref-source">Chapman & Hall/CRC.</span>
+        </li>
+        <li>
+          <span class="ref-authors">Agresti, A.</span> (2013).
+          <span class="ref-title">Categorical Data Analysis.</span>
+          <span class="ref-source">3rd Edition. Wiley.</span>
+        </li>
+        <li>
+          <span class="ref-authors">Hosmer, D. W., Lemeshow, S., & Sturdivant, R. X.</span> (2013).
+          <span class="ref-title">Applied Logistic Regression.</span>
+          <span class="ref-source">3rd Edition. Wiley.</span>
+        </li>
+        <li>
+          <span class="ref-authors">Bland, J. M. & Altman, D. G.</span> (1995).
+          <span class="ref-title">Multiple significance tests: the Bonferroni method.</span>
+          <span class="ref-source">BMJ, 310(6973), 170.</span>
+          <a href="https://doi.org/10.1136/bmj.310.6973.170" target="_blank">doi:10.1136/bmj.310.6973.170</a>
+        </li>
+        <li>
+          <span class="ref-authors">Kaggle.</span> (2022).
+          <span class="ref-title">E-Commerce A/B Testing Dataset.</span>
+          <span class="ref-source">Publicly available dataset, 288,541 user records.</span>
+          <a href="https://www.kaggle.com/" target="_blank">kaggle.com</a>
+        </li>
+        <li>
+          <span class="ref-authors">Deng, A., Xu, Y., Kohavi, R., & Walker, T.</span> (2013).
+          <span class="ref-title">Improving the Sensitivity of Online Controlled Experiments by Utilizing Pre-Experiment Data.</span>
+          <span class="ref-source">Proceedings of WSDM 2013, ACM.</span>
+        </li>
+      </ol>
+
+      <button class="bibtex-toggle" id="bibtexToggle">
+        Export BibTeX ↓
+      </button>
+      <div class="bibtex-block" id="bibtexBlock">@book{kohavi2020trustworthy,
+  title={Trustworthy Online Controlled Experiments: A Practical Guide to A/B Testing},
+  author={Kohavi, R. and Tang, D. and Xu, Y.},
+  year={2020},
+  publisher={Cambridge University Press}
+}
+
+@book{efron1994bootstrap,
+  title={An Introduction to the Bootstrap},
+  author={Efron, B. and Tibshirani, R. J.},
+  year={1994},
+  publisher={Chapman and Hall/CRC}
+}
+
+@book{agresti2013categorical,
+  title={Categorical Data Analysis},
+  author={Agresti, A.},
+  edition={3rd},
+  year={2013},
+  publisher={Wiley}
+}
+
+@book{hosmer2013applied,
+  title={Applied Logistic Regression},
+  author={Hosmer, D. W. and Lemeshow, S. and Sturdivant, R. X.},
+  edition={3rd},
+  year={2013},
+  publisher={Wiley}
+}
+
+@article{bland1995bonferroni,
+  title={Multiple significance tests: the Bonferroni method},
+  author={Bland, J. M. and Altman, D. G.},
+  journal={BMJ},
+  volume={310},
+  number={6973},
+  pages={170},
+  year={1995},
+  doi={10.1136/bmj.310.6973.170}
+}
+
+@inproceedings{deng2013improving,
+  title={Improving the Sensitivity of Online Controlled Experiments},
+  author={Deng, A. and Xu, Y. and Kohavi, R. and Walker, T.},
+  booktitle={Proceedings of WSDM},
+  year={2013},
+  publisher={ACM}
+}</div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div style="font-family:'Syne',sans-serif; font-weight:700; font-size:12px;">DAP391m Project · A/B Testing Analysis
+      — Checkout Page Design</div>
+    <div>Ecommerce AB Testing 2022 Dataset · 288,541 users · 3 markets · 4 models · 1 verdict</div>
+    <div style="color: var(--neg);">DO NOT ROLLOUT</div>
+  </footer>
+
+  <script>
+    // ========================================
+    // 1. MODEL TAB SWITCHING (preserved)
+    // ========================================
+    function switchModel(id, btn) {
+      document.querySelectorAll('.model-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.model-tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    // ========================================
+    // 2. SCROLL PROGRESS BAR
+    // ========================================
+    const progressBar = document.getElementById('scrollProgress');
+    window.addEventListener('scroll', () => {
+      const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+      const scrollHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+      const progress = (scrollTop / scrollHeight) * 100;
+      progressBar.style.width = progress + '%';
+    });
+
+    // ========================================
+    // 3. ANIMATED NUMBER COUNTERS
+    // ========================================
+    function animateCounter(el) {
+      const target = parseFloat(el.dataset.target);
+      const format = el.dataset.format;
+      const suffix = el.dataset.suffix || '';
+      const duration = 1800;
+      const start = performance.now();
+      // For negative targets, start from a negative-ish number for visual effect
+      const startVal = target < 0 ? target * 2 : 0;
+
+      function update(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = startVal + (target - startVal) * eased;
+
+        if (format === 'k') {
+          if (current >= 1000) {
+            el.textContent = Math.round(current / 1000) + 'K' + suffix;
+          } else {
+            el.textContent = Math.round(current) + suffix;
+          }
+        } else if (format === 'pct') {
+          el.textContent = current.toFixed(2) + suffix;
+        } else if (format === 'dec4') {
+          el.textContent = current.toFixed(4) + suffix;
+        } else {
+          el.textContent = Math.round(current) + suffix;
+        }
+
+        if (progress < 1) requestAnimationFrame(update);
+      }
+      requestAnimationFrame(update);
+    }
+
+    // Trigger counters when hero becomes visible
+    const counterObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          document.querySelectorAll('.counter[data-target]').forEach(el => {
+            animateCounter(el);
+          });
+          counterObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.3 });
+    const heroStats = document.querySelector('.hero-stats');
+    if (heroStats) counterObserver.observe(heroStats);
+
+    // ========================================
+    // 4. FADE-IN ON SCROLL (enhanced)
+    // ========================================
+    const fadeObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.style.opacity = '1';
+          entry.target.style.transform = 'translateY(0)';
+        }
+      });
+    }, { threshold: 0.08 });
+
+    document.querySelectorAll('section').forEach(el => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(30px)';
+      el.style.transition = 'opacity 0.7s ease, transform 0.7s ease';
+      fadeObserver.observe(el);
+    });
+
+    // ========================================
+    // 5. BIBTEX TOGGLE
+    // ========================================
+    document.getElementById('bibtexToggle').addEventListener('click', () => {
+      document.getElementById('bibtexBlock').classList.toggle('open');
+    });
+
+    // ========================================
+    // 6. CHART.JS — Bootstrap Histogram (static, based on study)
+    // ========================================
+    function generateBootstrapData(mean, std, n) {
+      const data = [];
+      for (let i = 0; i < n; i++) {
+        let u = 0, v = 0, s = 0;
+        do { u = Math.random() * 2 - 1; v = Math.random() * 2 - 1; s = u * u + v * v; } while (s >= 1 || s === 0);
+        const z = u * Math.sqrt(-2 * Math.log(s) / s);
+        data.push(mean + std * z);
+      }
+      return data;
+    }
+
+    function buildHistogram(data, bins) {
+      const min = Math.min(...data);
+      const max = Math.max(...data);
+      const binWidth = (max - min) / bins;
+      const counts = new Array(bins).fill(0);
+      const labels = [];
+      data.forEach(v => {
+        let idx = Math.floor((v - min) / binWidth);
+        if (idx >= bins) idx = bins - 1;
+        counts[idx]++;
+      });
+      for (let i = 0; i < bins; i++) {
+        const center = min + (i + 0.5) * binWidth;
+        labels.push(center.toFixed(2) + '%');
+      }
+      return { labels, counts, min, max, binWidth };
+    }
+
+    // Static bootstrap histogram
+    (function() {
+      const samples = generateBootstrapData(-1.29, 1.0, 10000);
+      const { labels, counts, min: hMin, binWidth } = buildHistogram(samples, 40);
+      const colors = labels.map(l => {
+        const v = parseFloat(l);
+        if (v >= -3.24 && v <= 0.71) return v <= 0 ? 'rgba(255,77,109,0.65)' : 'rgba(67,232,160,0.65)';
+        return 'rgba(112,112,160,0.25)';
+      });
+      new Chart(document.getElementById('bootstrapHistChart'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            data: counts,
+            backgroundColor: colors,
+            borderWidth: 0,
+            barPercentage: 1.0,
+            categoryPercentage: 1.0
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: {
+            title: ctx => 'Uplift: ' + ctx[0].label,
+            label: ctx => 'Frequency: ' + ctx.raw
+          }}},
+          scales: {
+            x: { display: true, grid: { display: false }, ticks: {
+              color: '#7070a0', font: { size: 9, family: 'DM Mono' },
+              maxTicksLimit: 8, maxRotation: 0
+            }},
+            y: { display: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: {
+              color: '#7070a0', font: { size: 9, family: 'DM Mono' }
+            }}
+          }
+        }
+      });
+    })();
+
+    // ========================================
+    // 7. CHART.JS — Country CR Comparison (grouped bar)
+    // ========================================
+    new Chart(document.getElementById('countryCrChart'), {
+      type: 'bar',
+      data: {
+        labels: ['UK', 'US', 'CA'],
+        datasets: [
+          {
+            label: 'Old Page',
+            data: [11.99, 12.06, 11.88],
+            backgroundColor: 'rgba(67, 232, 160, 0.7)',
+            borderColor: 'rgba(67, 232, 160, 1)',
+            borderWidth: 1
+          },
+          {
+            label: 'New Page',
+            data: [12.11, 11.85, 11.18],
+            backgroundColor: 'rgba(255, 77, 109, 0.7)',
+            borderColor: 'rgba(255, 77, 109, 1)',
+            borderWidth: 1
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, position: 'top', labels: {
+            color: '#7070a0', font: { size: 10, family: 'DM Mono' },
+            boxWidth: 10, boxHeight: 10, padding: 12
+          }},
+          tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + ctx.raw.toFixed(2) + '%' }}
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { color: '#7070a0', font: { size: 11, family: 'Syne' } }},
+          y: {
+            min: 10, max: 13,
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: { color: '#7070a0', font: { size: 10, family: 'DM Mono' }, callback: v => v + '%' }
+          }
+        }
+      }
+    });
+
+    // ========================================
+    // 8. CHART.JS — Country Uplift (bar chart)
+    // ========================================
+    new Chart(document.getElementById('countryUpliftChart'), {
+      type: 'bar',
+      data: {
+        labels: ['UK', 'US', 'CA'],
+        datasets: [{
+          label: 'Relative Uplift (%)',
+          data: [0.92, -1.76, -5.92],
+          backgroundColor: [
+            'rgba(67, 232, 160, 0.7)',
+            'rgba(255, 179, 71, 0.7)',
+            'rgba(255, 77, 109, 0.7)'
+          ],
+          borderColor: [
+            'rgba(67, 232, 160, 1)',
+            'rgba(255, 179, 71, 1)',
+            'rgba(255, 77, 109, 1)'
+          ],
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => 'Uplift: ' + ctx.raw.toFixed(2) + '%' }}
+        },
+        scales: {
+          x: {
+            grid: { color: 'rgba(255,255,255,0.04)' },
+            ticks: { color: '#7070a0', font: { size: 10, family: 'DM Mono' }, callback: v => v + '%' }
+          },
+          y: {
+            grid: { display: false },
+            ticks: { color: '#7070a0', font: { size: 12, family: 'Syne' } }
+          }
+        }
+      }
+    });
+
+    // ========================================
+    // 9. CHART.JS — Forest Plot (horizontal error bars)
+    // ========================================
+    (function() {
+      const ctx = document.getElementById('forestPlotChart');
+      const markets = ['Overall', 'UK', 'US', 'CA'];
+      const means = [-1.29, 0.92, -1.76, -5.92];
+      const lows = [-3.24, -3.00, -4.09, -14.29];
+      const highs = [0.71, 4.95, 0.62, 3.11];
+      const colors = ['#6c63ff', '#43e8a0', '#ffb347', '#ff4d6d'];
+
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: markets,
+          datasets: [{
+            label: 'Mean Uplift',
+            data: means,
+            backgroundColor: colors.map(c => c + 'aa'),
+            borderColor: colors,
+            borderWidth: 1,
+            barPercentage: 0.5
+          }]
+        },
+        plugins: [{
+          id: 'errorBars',
+          afterDatasetsDraw(chart) {
+            const { ctx: c, scales: { x, y } } = chart;
+            const meta = chart.getDatasetMeta(0);
+            meta.data.forEach((bar, i) => {
+              const yCenter = bar.y;
+              const xLow = x.getPixelForValue(lows[i]);
+              const xHigh = x.getPixelForValue(highs[i]);
+              c.save();
+              c.strokeStyle = colors[i];
+              c.lineWidth = 2;
+              c.beginPath();
+              c.moveTo(xLow, yCenter);
+              c.lineTo(xHigh, yCenter);
+              c.stroke();
+              [xLow, xHigh].forEach(px => {
+                c.beginPath();
+                c.moveTo(px, yCenter - 6);
+                c.lineTo(px, yCenter + 6);
+                c.stroke();
+              });
+              c.restore();
+            });
+            // Zero line
+            const xZero = x.getPixelForValue(0);
+            c.save();
+            c.strokeStyle = 'rgba(255,255,255,0.35)';
+            c.lineWidth = 1;
+            c.setLineDash([4, 4]);
+            c.beginPath();
+            c.moveTo(xZero, y.top);
+            c.lineTo(xZero, y.bottom);
+            c.stroke();
+            c.restore();
+          }
+        }],
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: {
+              label: ctx => {
+                const i = ctx.dataIndex;
+                return `Mean: ${means[i]}% | 95% CI: [${lows[i]}%, ${highs[i]}%]`;
+              }
+            }}
+          },
+          scales: {
+            x: {
+              min: -16, max: 6,
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { color: '#7070a0', font: { size: 10, family: 'DM Mono' }, callback: v => v + '%' }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: '#e8e8f0', font: { size: 12, family: 'Syne', weight: 700 } }
+            }
+          }
+        }
+      });
+    })();
+
+    // ========================================
+    // 10. Z-TEST INTERACTIVE CALCULATOR
+    // ========================================
+    const zCtrl = document.getElementById('zCtrl');
+    const zTreat = document.getElementById('zTreat');
+    const zN = document.getElementById('zN');
+    const zAlpha = document.getElementById('zAlpha');
+
+    function normalCDF(z) {
+      const a1=0.254829592, a2=-0.284496736, a3=1.421413741, a4=-1.453152027, a5=1.061405429, p=0.3275911;
+      const sign = z < 0 ? -1 : 1;
+      const x = Math.abs(z) / Math.sqrt(2);
+      const t = 1 / (1 + p * x);
+      const y = 1 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t * Math.exp(-x*x);
+      return 0.5 * (1 + sign * y);
+    }
+
+    function inverseNormalCDF(p) {
+      // Rational approximation (Abramowitz & Stegun)
+      if (p <= 0) return -Infinity;
+      if (p >= 1) return Infinity;
+      if (p < 0.5) return -inverseNormalCDF(1 - p);
+      const t = Math.sqrt(-2 * Math.log(1 - p));
+      const c0=2.515517, c1=0.802853, c2=0.010328, d1=1.432788, d2=0.189269, d3=0.001308;
+      return t - (c0 + c1*t + c2*t*t) / (1 + d1*t + d2*t*t + d3*t*t*t);
+    }
+
+    function updateZTest() {
+      const pCtrl = parseFloat(zCtrl.value) / 100;
+      const pTreat = parseFloat(zTreat.value) / 100;
+      const n = parseInt(zN.value);
+      const alpha = parseFloat(zAlpha.value);
+
+      document.getElementById('zCtrlVal').textContent = parseFloat(zCtrl.value).toFixed(2);
+      document.getElementById('zTreatVal').textContent = parseFloat(zTreat.value).toFixed(2);
+      document.getElementById('zNVal').textContent = n.toLocaleString();
+      document.getElementById('zAlphaVal').textContent = alpha.toFixed(2);
+
+      const pPool = (pCtrl * n + pTreat * n) / (2 * n);
+      const se = Math.sqrt(pPool * (1 - pPool) * (2 / n));
+      const zStat = se > 0 ? (pTreat - pCtrl) / se : 0;
+      const pValue = 2 * (1 - normalCDF(Math.abs(zStat)));
+      const critVal = inverseNormalCDF(1 - alpha / 2);
+      const significant = pValue < alpha;
+
+      document.getElementById('zStatOut').textContent = zStat.toFixed(4);
+      document.getElementById('zStatOut').style.color = significant ? 'var(--neg)' : 'var(--warn)';
+      document.getElementById('zPOut').textContent = pValue.toFixed(4);
+      document.getElementById('zPOut').style.color = significant ? 'var(--pos)' : 'var(--neg)';
+      document.getElementById('zCritOut').textContent = '±' + critVal.toFixed(2);
+
+      const zDec = document.getElementById('zDecisionOut');
+      const zDecSub = document.getElementById('zDecisionSub');
+      if (significant) {
+        zDec.textContent = 'REJECT';
+        zDec.style.color = 'var(--pos)';
+        if (zDecSub) { zDecSub.textContent = 'H₀ rejected'; zDecSub.style.color = 'var(--pos)'; }
+      } else {
+        zDec.textContent = 'FAIL';
+        zDec.style.color = 'var(--neg)';
+        if (zDecSub) { zDecSub.textContent = 'to reject H₀'; zDecSub.style.color = 'var(--muted)'; }
+      }
+    }
+
+    [zCtrl, zTreat, zN, zAlpha].forEach(el => el.addEventListener('input', updateZTest));
+    updateZTest();
+
+    // ========================================
+    // 11. BOOTSTRAP LIVE SIMULATOR
+    // ========================================
+    const bsIter = document.getElementById('bsIter');
+    const bsSize = document.getElementById('bsSize');
+    const bsRunBtn = document.getElementById('bsRunBtn');
+    let bsLiveChart = null;
+
+    bsIter.addEventListener('input', () => {
+      document.getElementById('bsIterVal').textContent = parseInt(bsIter.value).toLocaleString();
+    });
+    bsSize.addEventListener('input', () => {
+      document.getElementById('bsSizeVal').textContent = parseInt(bsSize.value).toLocaleString();
+    });
+
+    bsRunBtn.addEventListener('click', () => {
+      bsRunBtn.disabled = true;
+      bsRunBtn.textContent = '⟳ RUNNING...';
+      const iterations = parseInt(bsIter.value);
+      const n = parseInt(bsSize.value);
+
+      // Scale std inversely with sqrt(n / 144270)
+      const baseStd = 1.0;
+      const scaledStd = baseStd * Math.sqrt(144270 / n);
+      const samples = generateBootstrapData(-1.29, scaledStd, iterations);
+
+      samples.sort((a, b) => a - b);
+      const lo = samples[Math.floor(0.025 * iterations)];
+      const hi = samples[Math.floor(0.975 * iterations)];
+      const mean = samples.reduce((a, b) => a + b, 0) / iterations;
+
+      const { labels, counts } = buildHistogram(samples, 40);
+      const colors = labels.map(l => {
+        const v = parseFloat(l);
+        if (v >= lo && v <= hi) return v <= 0 ? 'rgba(255,77,109,0.65)' : 'rgba(67,232,160,0.65)';
+        return 'rgba(112,112,160,0.25)';
+      });
+
+      if (bsLiveChart) bsLiveChart.destroy();
+      bsLiveChart = new Chart(document.getElementById('bootstrapLiveChart'), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{ data: counts, backgroundColor: colors, borderWidth: 0, barPercentage: 1.0, categoryPercentage: 1.0 }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          animation: { duration: 800, easing: 'easeInOutQuart' },
+          plugins: { legend: { display: false }},
+          scales: {
+            x: { display: true, grid: { display: false }, ticks: { color: '#7070a0', font: { size: 9, family: 'DM Mono' }, maxTicksLimit: 8, maxRotation: 0 }},
+            y: { display: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7070a0', font: { size: 9, family: 'DM Mono' }}}
+          }
+        }
+      });
+
+      document.getElementById('bsMean').textContent = mean.toFixed(2) + '%';
+      document.getElementById('bsMean').style.color = mean < 0 ? 'var(--neg)' : 'var(--pos)';
+      document.getElementById('bsLow').textContent = lo.toFixed(2) + '%';
+      document.getElementById('bsLow').style.color = 'var(--neg)';
+      document.getElementById('bsHigh').textContent = hi.toFixed(2) + '%';
+      document.getElementById('bsHigh').style.color = hi > 0 ? 'var(--pos)' : 'var(--neg)';
+      const containsZero = lo <= 0 && hi >= 0;
+      const bsZeroEl = document.getElementById('bsContainsZero');
+      bsZeroEl.textContent = containsZero ? 'YES' : 'NO';
+      bsZeroEl.style.color = containsZero ? 'var(--warn)' : 'var(--pos)';
+      // Update sublabel below
+      const bsZeroSub = document.getElementById('bsContainsZeroSub');
+      if (bsZeroSub) {
+        bsZeroSub.textContent = containsZero ? 'Not significant' : 'Significant!';
+        bsZeroSub.style.color = containsZero ? 'var(--muted)' : 'var(--pos)';
+      }
+
+      bsRunBtn.disabled = false;
+      bsRunBtn.textContent = '▶ Run Bootstrap Simulation';
+    });
+
+    // ========================================
+    // 12. CHART.JS — CR Comparison Bar with Error Bars
+    // ========================================
+    (function() {
+      const crOld = 12.03, crNew = 11.87;
+      const nOld = 144226, nNew = 144315;
+      const seOld = 1.96 * Math.sqrt((crOld/100)*(1-crOld/100)/nOld)*100;
+      const seNew = 1.96 * Math.sqrt((crNew/100)*(1-crNew/100)/nNew)*100;
+
+      new Chart(document.getElementById('crCompareChart'), {
+        type: 'bar',
+        data: {
+          labels: ['Old Page (Control)', 'New Page (Treatment)'],
+          datasets: [{
+            data: [crOld, crNew],
+            backgroundColor: ['rgba(67, 232, 160, 0.7)', 'rgba(255, 77, 109, 0.7)'],
+            borderColor: ['rgba(67, 232, 160, 1)', 'rgba(255, 77, 109, 1)'],
+            borderWidth: 1,
+            barPercentage: 0.5
+          }]
+        },
+        plugins: [{
+          id: 'crErrorBars',
+          afterDatasetsDraw(chart) {
+            const c = chart.ctx;
+            const meta = chart.getDatasetMeta(0);
+            const errors = [seOld, seNew];
+            const values = [crOld, crNew];
+            const cols = ['rgba(67,232,160,1)', 'rgba(255,77,109,1)'];
+            meta.data.forEach((bar, i) => {
+              const x = bar.x;
+              const yLo = chart.scales.y.getPixelForValue(values[i] - errors[i]);
+              const yHi = chart.scales.y.getPixelForValue(values[i] + errors[i]);
+              c.save();
+              c.strokeStyle = cols[i];
+              c.lineWidth = 2;
+              c.beginPath(); c.moveTo(x, yLo); c.lineTo(x, yHi); c.stroke();
+              [yLo, yHi].forEach(py => {
+                c.beginPath(); c.moveTo(x-6, py); c.lineTo(x+6, py); c.stroke();
+              });
+              c.restore();
+            });
+          }
+        }],
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.raw.toFixed(2) + '%' }}},
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#7070a0', font: { size: 10, family: 'DM Mono' }}},
+            y: { min: 11.5, max: 12.5, grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { color: '#7070a0', font: { size: 10, family: 'DM Mono' }, callback: v => v.toFixed(1) + '%' }}
+          }
+        }
+      });
+    })();
+
+    // ========================================
+    // 13. CHART.JS — Waterfall Chart (stacked bar hack)
+    // ========================================
+    (function() {
+      new Chart(document.getElementById('waterfallChart'), {
+        type: 'bar',
+        data: {
+          labels: ['Old Page CR', 'Δ Lift', 'New Page CR'],
+          datasets: [
+            {
+              label: 'Base',
+              data: [0, 11.874, 0],
+              backgroundColor: 'transparent',
+              borderWidth: 0
+            },
+            {
+              label: 'Value',
+              data: [12.03, -0.156, 11.874],
+              backgroundColor: [
+                'rgba(67, 232, 160, 0.7)',
+                'rgba(255, 77, 109, 0.7)',
+                'rgba(108, 99, 255, 0.7)'
+              ],
+              borderColor: [
+                'rgba(67, 232, 160, 1)',
+                'rgba(255, 77, 109, 1)',
+                'rgba(108, 99, 255, 1)'
+              ],
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: {
+              label: ctx => {
+                if (ctx.datasetIndex === 0) return '';
+                const vals = ['12.03%', '-0.156pp', '11.87%'];
+                return vals[ctx.dataIndex];
+              }
+            }}
+          },
+          scales: {
+            x: { stacked: true, grid: { display: false }, ticks: { color: '#7070a0', font: { size: 10, family: 'DM Mono' } }},
+            y: { stacked: true, min: 0, max: 14, grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { color: '#7070a0', font: { size: 10, family: 'DM Mono' }, callback: v => v + '%' }}
+          }
+        }
+      });
+    })();
+
+    // ========================================
+    // 14. ACTIVE NAV HIGHLIGHT ON SCROLL
+    // ========================================
+    const navLinks = document.querySelectorAll('.nav-links a');
+    const sections = document.querySelectorAll('section[id]');
+
+    window.addEventListener('scroll', () => {
+      let current = '';
+      sections.forEach(section => {
+        const sectionTop = section.offsetTop - 120;
+        if (window.scrollY >= sectionTop) {
+          current = section.getAttribute('id');
+        }
+      });
+      navLinks.forEach(link => {
+        link.style.color = link.getAttribute('href') === '#' + current ? '#e8e8f0' : '';
+      });
+    });
+  </script>
+
+</body>
+
+</html>
