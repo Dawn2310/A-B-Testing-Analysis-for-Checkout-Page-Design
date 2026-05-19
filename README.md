@@ -1,6 +1,3 @@
-
-
-```markdown
 # A/B Testing Analysis for Checkout Page Design
 
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
@@ -147,7 +144,6 @@ A-B-Testing-Analysis-for-Checkout-Page-Design/
 │   └── survey_AB_test.pdf                  # Reference survey paper
 │
 └── README.md
-
 ```
 
 ---
