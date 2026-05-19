@@ -40,6 +40,17 @@ The main hypothesis test is two-tailed:
 - **Alternative Hypothesis (H₁):** The new checkout page has a different conversion rate compared with the old page.  
   `CR_new ≠ CR_old`
 
+## Statistical Interpretation Framework
+
+To avoid misinterpreting the A/B test results, this project separates descriptive metrics from inferential statistical evidence.
+
+| Component | Role |
+|---|---|
+| Conversion Rate (CR) | Descriptive metric showing what happened in the observed sample |
+| Absolute Lift / Relative Uplift | Point estimates measuring the direction and size of the observed difference |
+| Z-test / Bootstrap CI | Inferential evidence used to assess whether the observed difference is statistically reliable |
+
+A negative uplift alone is not treated as the final conclusion. The final decision must consider the p-value, confidence interval, segment-level risk, and business context together.
 ---
 
 ## Dataset
@@ -104,17 +115,6 @@ A-B-Testing-Analysis-for-Checkout-Page-Design/
 │       ├── logistic_vif_results.csv
 │       └── logistic_vif_interaction_results.csv
 │
-├── results/                                # Duplicate results for quick access
-│   ├── conversion_summary.csv
-│   ├── lift_summary.csv
-│   ├── ztest_results.csv
-│   ├── bootstrap_results.csv
-│   ├── bootstrap_summary.csv
-│   ├── country_summary.csv
-│   ├── country_uplift.csv
-│   ├── country_ztest_results.csv
-│   ├── country_bootstrap_summary.csv
-│   └── country_final_results.csv
 │
 ├── notebooks/
 │   ├── 01_data_preprocessing.ipynb
@@ -138,12 +138,16 @@ A-B-Testing-Analysis-for-Checkout-Page-Design/
 │   ├── country_bootstrap_ci.png
 │   └── lift_waterfall.png
 │
-├── paper/
-│   └── survey_AB_test.pdf                  # Reference survey paper
 │
 └── README.md
 ```
 
+## Interactive Dashboard
+
+This project also includes a static HTML dashboard:
+
+```text
+index.html
 ---
 
 ## Data Preprocessing
@@ -246,38 +250,34 @@ However, the **95% confidence interval crosses zero**. This means the observed n
 This supports the previous two-proportion z-test conclusion that there is not enough evidence to claim a significant difference between the two pages.
 
 ---
+## Country-Level Deep Dive and Heterogeneous Treatment Effects
 
-## Country Segmentation
+To examine whether the treatment effect varies across markets, a country-level analysis was conducted. Instead of interpreting each segment separately, this section evaluates whether the redesigned page produces heterogeneous treatment effects across countries.
 
-The analysis was broken down by country to check for localized effects.
+The country-level analysis includes:
+
+- conversion rate and uplift by country
+- country-level two-proportion z-tests
+- country-level bootstrap confidence intervals
+- Bonferroni correction for multiple comparisons
+
+### Country-Level Descriptive Results
 
 | Country | Old Page CR | New Page CR | Relative Uplift |
-|---|---|---|---|
+|---|---:|---:|---:|
 | UK | 12.00% | 12.11% | +0.92% |
 | US | 12.06% | 11.85% | -1.76% |
 | CA | 11.88% | 11.18% | -5.92% |
 
-### Country-Level Insight
+The UK segment shows a small positive descriptive uplift, while the US and CA segments show negative uplift. CA has the largest negative relative uplift, while the US segment has the largest user base and therefore strongly influences the overall result.
 
-- **UK** shows a small positive descriptive uplift.
-- **US** shows a negative descriptive uplift and represents the largest user segment.
-- **CA** shows the largest negative relative uplift.
+### Country-Level Statistical Testing
 
-The new page does not show consistent improvement across markets.
+Country-level two-proportion z-tests were conducted for CA, UK, and US. Since multiple country-level tests were performed, Bonferroni correction was applied:
 
----
-
-## Country-Level Statistical Testing
-
-To verify whether the observed country-level differences were statistically significant, two-proportion z-tests were conducted separately for each country.
-
-Across CA, UK, and US, **none of the country-level p-values fell below the 0.05 significance threshold**.
-
-Therefore, there is not enough statistical evidence to conclude that the new page performs significantly differently from the old page within any individual country.
-
-Bonferroni correction was also applied to account for multiple comparisons across countries.
-
----
+```markdown
+```text
+alpha_corrected = 0.05 / 3 = 0.0167
 
 ## Country-Level Bootstrap Confidence Intervals
 
@@ -333,9 +333,11 @@ The following figures were created and saved in the `figures/` directory:
 
 ## Logistic Regression Modeling
 
-Logistic regression was applied as a complementary inference model because the outcome variable `converted` is binary.
+Logistic regression was applied as a complementary inference model, not as a pure classification model.
 
-The goal was not to maximize prediction accuracy, but to **estimate whether treatment assignment is associated with conversion probability** after controlling for country and time-related variation.
+The goal was not to maximize prediction accuracy. Instead, the goal was to test whether treatment assignment is associated with conversion probability after controlling for country and time-related variation.
+
+This modeling step is used to validate whether the conclusions from the z-test, bootstrap confidence interval, and country-level analysis remain stable under a multivariate statistical model.
 
 ### Models
 
@@ -395,7 +397,27 @@ The VIF results showed **no severe multicollinearity problem**.
 Therefore, the logistic regression results support the earlier z-test, bootstrap, and country-level findings.
 
 ---
+## Guardrails and Decision Matrix
 
+The final rollout recommendation is based on both statistical evidence and business risk. The decision rule is defined before making the final recommendation.
+
+| Scenario | Statistical Condition | Business Risk Condition | Action | Status |
+|---|---|---|---|---|
+| Ideal Rollout | p-value < 0.05 and 95% CI strictly above 0 | Positive or neutral across key markets | Full rollout | Not met |
+| No Reliable Improvement | p-value >= 0.05 or 95% CI contains 0 | No clear positive effect | Do not rollout | Met globally |
+| Segment Risk | Country-level effect is uncertain but downside risk is large | Large asymmetric downside in a market | Defer rollout / regional holdback | Met in CA |
+
+### Applied Decision Rules
+
+1. The global z-test was not statistically significant.
+2. The global bootstrap confidence interval contains 0.
+3. No country-level result was statistically significant.
+4. The CA segment shows large downside risk.
+5. Logistic regression does not show reliable treatment improvement.
+6. Country and time adjustments do not change the conclusion.
+7. Interaction terms do not support targeted rollout by country.
+
+Based on these rules, the new page should not be rolled out at this stage.
 ## Final Business Recommendation
 
 Based on all statistical and modeling evidence, the recommendation is:
@@ -424,16 +446,16 @@ Further redesign and additional testing are recommended before considering deplo
 - [x] Assignment-page mismatch filtering
 - [x] Merge country information
 - [x] Timestamp feature engineering
-- [x] Calculate Conversion Rate, Lift, and Uplift
-- [x] Run Two-Proportion Z-Test
+- [x] Conversion Rate, Lift, and Uplift analysis
+- [x] Two-Proportion Z-Test
 - [x] Bootstrap Confidence Interval with 10,000 iterations
-- [x] Country Segmentation Analysis
-- [x] Country-Level Hypothesis Testing
-- [x] Country-Level Bootstrap Confidence Intervals
+- [x] Country-level Heterogeneous Treatment Effect analysis
+- [x] Country-level hypothesis testing
+- [x] Country-level bootstrap confidence intervals
 - [x] Data visualizations generated with Matplotlib
 - [x] Logistic Regression Modeling
 - [x] Logistic Regression Diagnostics
-- [x] Final Business Recommendation formulated
+- [x] Decision Matrix and Business Recommendation
 
 ---
 
