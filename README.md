@@ -370,9 +370,9 @@ The final rollout recommendation is based on both statistical evidence and busin
 
 | Scenario | Statistical Condition | Business Risk Condition | Action | Status |
 | --- | --- | --- | --- | --- |
-| **Ideal Rollout** | p-value < 0.05 and 95% CI strictly above 0 | Positive or neutral across key markets | Full rollout | ❌ Not met |
-| **No Reliable Improvement** | p-value >= 0.05 or 95% CI contains 0 | No clear positive effect | Do not rollout | ✅ **Met globally** |
-| **Segment Risk** | Country-level effect is uncertain but downside risk is large | Large asymmetric downside in a market | Defer rollout / regional holdback | ✅ **Met in CA** |
+| **Ideal Rollout** | p-value < 0.05 and 95% CI strictly above 0 | Positive or neutral across key markets | Full rollout | Not met |
+| **No Reliable Improvement** | p-value >= 0.05 or 95% CI contains 0 | No clear positive effect | Do not rollout | **Met globally** |
+| **Segment Risk** | Country-level effect is uncertain but downside risk is large | Large asymmetric downside in a market | Defer rollout / regional holdback |  **Met in CA** |
 
 ### Applied Decision Rules
 
